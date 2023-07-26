@@ -74,7 +74,7 @@
 
     (printf "test immage as expected\n"); if true
 
-    (error "incorrect image!")) ; else
+    (printf "incorrect image!")) ; else
 
 ROCKET ; evaluate line "ROCKET" becomes an image
 
@@ -667,3 +667,72 @@ This is a Contradiction of the original assumption (√2 is rational) so that me
 our assumption is not true so √2 is irratonal
 
 ------------------------------------------------------------------|#
+
+
+#|2.5 PROGRAMS|#
+
+#|batch vs interactive program:
+batch - consumes all inputs and generates a result, the oporating system call the program, gives it it's inputs and wait for a result
+interacctive - consumes some inputs, generates a result then waits for more input the produces and output and so on|#
+
+(require 2htdp/batch-io)
+
+
+(write-file "sample.dat" "212")
+(read-file "sample.dat")
+
+(write-file 'stdout "212\n") ; the printed result of this line (212\n'stdout) does not have quotes around the 212 because of the token 'stdout
+
+
+(define (F-to-C-from-file in out)
+  (write-file out ; write string to the file out
+              (string-append
+               (number->string ; change C number to string
+               (celcius ; convert F number to C number
+                (string->number ; convert string to number
+                 (read-file in)))); take string input from file
+               "\n"); add \newline char after each pass of program to differntiate the results from each other
+  ) 
+)
+
+;; lets test the above program
+(write-file "sample.dat" "212")
+(F-to-C-from-file "sample.dat" 'stdout)
+(F-to-C-from-file "sample.dat" "out.dat")
+(read-file "out.dat")
+
+
+(require 2htdp/universe)
+
+(define (number->square i)
+  (rectangle i i "solid" "red"))
+
+(number->square 5)
+(number->square 10)
+(number->square 20)
+
+;;(big-bang 100 (to-draw number->square))
+
+(define (reset s key) 100)
+
+;;(big-bang 100
+  ;;[to-draw number->square]
+  ;;[on-tick sub1]
+  ;;[stop-when zero?]
+  ;;[on-key reset])
+
+(define BACKGROUND (empty-scene 100 100))
+(define DOT (circle 3 "solid" "red"))
+ 
+(define (main y)
+  (big-bang y
+    [on-tick sub1]
+    [stop-when zero?]
+    [to-draw place-dot-at]
+    [on-key stop]))
+ 
+(define (place-dot-at y)
+  (place-image DOT 50 y BACKGROUND))
+ 
+(define (stop y ke)
+  0)
