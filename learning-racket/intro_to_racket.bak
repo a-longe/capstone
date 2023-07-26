@@ -1,0 +1,91 @@
+#lang slideshow
+; 3 Go!
+> 5
+>(circle 10)
+>(rectangle 10 20)
+>(hc-append (circle 10) (rectangle 10 20))
+; 4 Definitions
+(define c (circle 10))
+(define r (rectangle 10 20))
+>(hc-append 20 c r c)
+(define (square n)
+  (filled-rectangle n n)); you need the second bracket to close off the "function" body
+>(square 10)
+; 5 Local Binding
+(define (four p)
+  (define two-p (hc-append p p))
+  (vc-append two-p two-p))
+>(four (circle 10))
+>(four (square 20))
+(define (checker item1 item2)
+    (let ([pattern1 (hc-append item1 item2)] ; let assigns multiple values at once 
+          [pattern2 (hc-append item2 item1)])
+      (vc-append pattern1 pattern2)))   
+>(checker (colorize (square 10) "brown")
+          (colorize (square 10) "tan"))
+(define (chessboard item)
+  (let* ([tile1 (colorize item "brown")]
+         [tile2 (colorize item "tan")]
+         [c4 (checker tile1 tile2)]
+         [c16 (four c4)])
+    (four c16)))
+>(chessboard (square 20))
+; 6 Functions are Values
+(define (series func)
+  (hc-append 4 (func 10) (func 20) (func 30))); now I see how a function can create code. wow.
+>(series circle)
+>(series square)
+>(series (lambda (size) (chessboard (square size))))
+; 7 Lexical Scope
+(define (series-rgb func)
+  (vc-append
+   (series (lambda (size) (colorize (func size) "red")))
+   (series (lambda (size) (colorize (func size) "green")))
+   (series (lambda (size) (colorize (func size) "blue")))))
+>(series-rgb circle)
+>(series-rgb square)
+(define (maker-rgb func)
+  (lambda (size)
+    (vc-append (colorize (func size) "red")
+               (colorize (func size) "green")
+               (colorize (func size) "blue"))))
+>(series(maker-rgb circle))
+>(series(maker-rgb square))
+; 8 Lists
+>(list "green" "blue" "red")
+>(list (circle 10)(square 10))
+(define (rainbow image)
+  (map (lambda(color)
+         (colorize image color))
+       (list "red" "orange" "yellow" "green" "blue" "purple")))
+>(rainbow (square 20))
+>(apply vc-append 10 (rainbow(square 20)))
+; 9 Modules
+(require pict/flash)
+> (filled-flash 40 40)
+; 10 Macros
+(require slideshow/code)
+>(code (circle 10))
+(define-syntax pict+code
+  (syntax-rules ()
+    [(pict+code expression)
+     (hc-append 10
+                expression
+                (code expression))]))
+>(pict+code(circle 10))
+; 11 Objects
+(require racket/class
+         racket/gui/base)
+(define frame (new frame% [label "Art"]
+                          [width 300]
+                          [height 300]
+                          [alignment '(center center)]))
+>(send frame show #t)
+(define (add-drawing picture)
+  (let ([drawer (make-pict-drawer picture)])
+    (new canvas% [parent frame]
+                 [style '(border)]
+                 [paint-callback (lambda (self dc)
+                                   (drawer dc 0 0))])))
+>(add-drawing (chessboard (square 20)))
+>(add-drawing (colorize (square 10) "yellow"))
