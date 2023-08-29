@@ -426,13 +426,13 @@ way to program. THat is what the rest of this book will be about|#
 
 
 
-(define (string-last str)
+;;(define (string-last str)
 
-  (last(string->list str)))
+  ;;(last(string->list str)))
 
 
 
-(string-last "hello world")
+;;(string-last "hello world")
 
 
 
@@ -454,13 +454,13 @@ way to program. THat is what the rest of this book will be about|#
 
 ;better way to do string-first
 
-(define (string-first s)
+;;(define (string-first s)
 
-  (substring s 0 1))
+  ;;(substring s 0 1))
 
 
 
-(string-first "hello world")
+;;(string-first "hello world")
 
 
 
@@ -736,3 +736,79 @@ interacctive - consumes some inputs, generates a result then waits for more inpu
  
 (define (stop y ke)
   0)
+
+#|3 HOW TO DESIGN PROGRAMS|#
+#|3.1 DESIGNING FUNCTIONS|#
+
+;; - first tell others what value type(s) will be consumed and what value will be produced
+;; Number -> Number
+
+;; - next give a purpose statement or function header
+;; computes the area of a square with side 'len'
+
+;; - then give some examples of inputs and their expected output
+;; given: 2, excpect: 4
+;; given 7, expect 49
+
+;; - give your function an appropriate name, lets call this one area-of-square
+;; (define (area-of-square len) 0)
+
+;; - make a function template, withh no opporators or values other than the given one (len)
+;; - right now the template are increadibly simple but they will gety more complicated
+;; (define (area-of-square len)(... len ...))
+
+;; - finally fill in the ...s and test your function
+(define (area-of-square len) (sqr len))
+(area-of-square 2) ; should be 4
+(area-of-square 7) ; should be 49
+
+#|3.2 FINGER EXCERSISES: FUNCTIONS|#
+
+;; String -> String
+;; returns a given strings first charachter
+;; given: "hello", expected: "h"
+(define (string-first str)
+  (substring str 0 1))
+
+(string-first "hello")
+
+
+;; ;; String -> String
+;; returns a given strings last charachter
+;; given: "hello", expected: "o"
+(define (string-last str)
+  (substring
+   str (-(string-length str)1)))
+
+(string-last "hello")
+
+
+;; Image -> Number
+;; returns the number of pixles in an image
+;; given: ROCKET, expect: 400
+(define (image-area img)
+  (*(image-width img)(image-height img)))
+
+(image-area ROCKET)
+
+
+;; ;; String -> String
+;; returns a given string without the first letter
+;; given: "hello", expected: "ello"
+(define (string-rest str)
+  (substring
+   str 1))
+
+(string-rest "hello")
+
+
+;; ;; String -> String
+;; returns a given string without the last letter
+;; given: "hello", expected: "hell"
+(define (string-remove-last str)
+  (substring
+   str 0 (-(string-length str)1)))
+
+(string-remove-last "hello")
+
+#|3.3 DOMAIN KNOWLEGE|#
