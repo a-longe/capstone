@@ -55,3 +55,35 @@
 
 (oh-man-do-i-love-strings "i love strings")
 (oh-man-do-i-love-strings '(1 2 3))
+
+;; return multiple values from one function
+(define (add-and-multiply x y)
+    (values (+ x y)(* x y)))
+
+(define-values (added multiplied)
+    (add-and-multiply 3 10))
+
+;; Conditionals
+
+(> 8 9) ; is 8 greater than 9? = f
+(< 8 9) ; is 8 less than 9? = t
+(> 8 8) ; is 8 greater than 8? = f
+(>= 8 8) ; is 8 greater than or equal to 8? = t
+
+;; goldilocks program that checks if one number is in between two other numbers
+(define (goldilocks num largest smallest)
+    (if (< num smallest)
+        "too small!"
+        (if (> num largest)
+            "too big!"
+            "just right!")))
+
+;; instead of using if statements try using the condition block
+;;(cond (<#t or #f> <BODY>) [(else <BODY>)])
+
+(define (new-goldilocks num largest smallest)
+    (cond ((< num smallest) 
+    "too small")
+    [else (cond ((> num largest)
+                "too big")
+                [else "just right"])]))
