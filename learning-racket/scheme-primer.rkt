@@ -87,3 +87,18 @@
     [else (cond ((> num largest)
                 "too big")
                 [else "just right"])]))
+
+;; eq? vs equal?
+#|
+    eq? - eq? compares the identitiy of the two objects provided
+    as in are they the same object by name (var1 == var1)
+
+    equal? - compares the content of the two abjects as in are they
+    equivilant (2 == 2)
+|#
+(define a-list '(1 2 3))
+(define b-list '(1 2 3))
+(equal? a-list a-list) ; ==> #t
+(eq? a-list a-list) ; ==> #t
+(equal? a-list b-list) ; ==> #t
+(eq? a-list b-list) ; ==> #f
