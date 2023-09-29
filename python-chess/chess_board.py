@@ -1,4 +1,6 @@
 from chessboard import display
+import subprocess
+import uci_handler
 
 init_fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 game_board = display.start()
