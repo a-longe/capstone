@@ -1,12 +1,11 @@
 from chessboard import display, constants
 import subprocess
-import uci_handler
+import uci_handler, mouse_event_handler
 
-moves:str = ""
 game_board = display.start()
 display.update(constants.STARTING_FEN, game_board)
 fen = constants.STARTING_FEN
-MOVETIME = 500
+MOVETIME = 5000
 
 while True:
     display.check_for_quit()
