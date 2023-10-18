@@ -2,6 +2,7 @@ from chessboard import display, constants
 import subprocess
 import uci_handler, mouse_event_handler
 
+
 game_board = display.start()
 display.update(constants.STARTING_FEN, game_board)
 fen = constants.STARTING_FEN

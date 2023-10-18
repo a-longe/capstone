@@ -70,7 +70,7 @@ Now On 5.5
     # unpacking tuples (len(a) = 3)
     b, c, d = a
     ```
-- sets are similar to lists however there are a few key differences, <br>
+- sets are similar to lists however there are a few key    differences, <br>
   most importantly, they are unordered, can have no duplicates and mamatical comutations can be performed directly on the set and no the individual items
 - Here is how to use sets in code:
     ```
