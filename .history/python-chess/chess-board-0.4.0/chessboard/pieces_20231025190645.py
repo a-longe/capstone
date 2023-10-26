@@ -1,8 +1,8 @@
 import os
 import pygame
-import utils
 
 from chessboard.constants import IMAGE_DIR
+
 
 class PieceColor:
     BLACK = 'BLACK'
@@ -34,7 +34,6 @@ class Piece(pygame.sprite.Sprite):
     w_rook = pygame.image.load(os.path.join(IMAGE_DIR, 'wR.png'))
 
     def __init__(self, color, piece, display_surf):
-        pygame.sprite.Sprite.__init__(self)
         self.position = None
         self.sprite = None
         self.display_surf = display_surf

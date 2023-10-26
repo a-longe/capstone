@@ -1,8 +1,8 @@
 import os
 import pygame
-import utils
 
 from chessboard.constants import IMAGE_DIR
+
 
 class PieceColor:
     BLACK = 'BLACK'

@@ -6,7 +6,6 @@ from chessboard.pieces import Piece, PieceColor, PieceType
 from chessboard.fenparser import FenParser
 from chessboard.utils import is_odd
 
-
 class Board:
     a8, a7, a6, a5, a4, a3, a2, a1 = (100, 100), (100, 150), (100, 200), (100, 250), (100, 300), (100, 350), (100, 400), (100, 450)
     b8, b7, b6, b5, b4, b3, b2, b1 = (150, 100), (150, 150), (150, 200), (150, 250), (150, 300), (150, 350), (150, 400), (150, 450)

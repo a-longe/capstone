@@ -20,7 +20,7 @@ while True:
     fen = uci_handler.get_fen_after_move(fen, best_move)
     print(fen)
     """
-    # display.update(fen, game_board)
+    display.update(fen, game_board)
     
     mouse_event = None
     # on any pygame events
@@ -40,25 +40,26 @@ while True:
             # is mouse down event
             mouse_event = event
 
-            # find square that mouse is on
-            event_sqr = meh.get_board_pos(*mouse_event.dict['pos'])
-            print(event_sqr)
+    if mouse_event != None:
+        # find square that mouse is on
+        event_sqr = meh.get_board_pos(*mouse_event.dict['pos'])
+        print(event_sqr)
 
-            # if the click is on the board (ie: not 'OOB')
-            if event_sqr != 'OOB':
-                # print piece information
+        # if the click is on the board (ie: not 'OOB')
+        if event_sqr != 'OOB':
+            # print piece information
+            try:
+                # if this suceeds, set dragging to True
+                is_dragging = True
                 pieces = verify_moves.parse_piece_rect(game_board.piece_rect)
-                if event_sqr in pieces.keys():
-                    # if this suceeds, set dragging to True
-                    is_dragging = True
-                    piece_to_drag = pieces[event_sqr]
+                piece_to_drag = pieces[event_sqr]
+            except KeyError:
+                pass
 
     # if is_dragging is true set position of 
     if is_dragging and piece_to_drag != None:
-        piece_rect = piece_to_drag['piece'].sprite.get_rect()
-        piece_rect.move_ip(meh.get_mouse_pos())
-        print(piece_rect)
-        piece_to_drag['piece'].display_piece()
+        piece_to_drag['piece'].position = meh.get_mouse_pos()
+    print("\r", is_dragging)
     # print(meh.get_board_pos(*meh.get_mouse_pos()))
 
     # board flip interface

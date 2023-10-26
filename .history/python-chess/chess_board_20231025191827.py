@@ -20,7 +20,7 @@ while True:
     fen = uci_handler.get_fen_after_move(fen, best_move)
     print(fen)
     """
-    # display.update(fen, game_board)
+    display.update(fen, game_board)
     
     mouse_event = None
     # on any pygame events
@@ -57,8 +57,7 @@ while True:
     if is_dragging and piece_to_drag != None:
         piece_rect = piece_to_drag['piece'].sprite.get_rect()
         piece_rect.move_ip(meh.get_mouse_pos())
-        print(piece_rect)
-        piece_to_drag['piece'].display_piece()
+        print(piece_to_drag['piece'].position)
     # print(meh.get_board_pos(*meh.get_mouse_pos()))
 
     # board flip interface

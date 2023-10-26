@@ -1,4 +1,6 @@
 import my_utils
+import mouse_event_handler
+from copy import deepcopy
 
 CHESS_BOARD_LEN = 64
 BINARY_PREFIX = '0b'
@@ -124,11 +126,21 @@ def get_bitboard_index(location:str) -> int:
 
 def create_piece_bitboard(location:str) -> int:
     index = get_bitboard_index(location)
-    zeros_before = index - 1
     zeros_after = CHESS_BOARD_LEN - 1 - index
     bitboard:str = BINARY_PREFIX + \
-                '0' * zeros_before + \
                 '1' + \
                 '0' * zeros_after
     return int(bitboard, 2)
 
+
+def parse_piece_rect(piece_rect:list) -> dict:
+    pieces:dict = {}
+    for piece in piece_rect:
+        position = mouse_event_handler.get_board_pos(piece.position[0], piece.position[1])
+        piece_values:dict = {}
+        piece_values['color'] = piece.color
+        piece_values['type'] = piece.piece
+        piece_values['piece'] = piece
+        pieces[position] = piece_values
+        
+    return pieces

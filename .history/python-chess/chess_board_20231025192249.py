@@ -58,7 +58,6 @@ while True:
         piece_rect = piece_to_drag['piece'].sprite.get_rect()
         piece_rect.move_ip(meh.get_mouse_pos())
         print(piece_rect)
-        piece_to_drag['piece'].display_piece()
     # print(meh.get_board_pos(*meh.get_mouse_pos()))
 
     # board flip interface
