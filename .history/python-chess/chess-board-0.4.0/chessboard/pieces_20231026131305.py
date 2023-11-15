@@ -1,6 +1,6 @@
 import os
 import pygame
-import utils.py
+import utils
 
 from chessboard.constants import IMAGE_DIR
 
@@ -35,15 +35,15 @@ class Piece(pygame.sprite.Sprite):
 
     def __init__(self, color, piece, display_surf):
         pygame.sprite.Sprite.__init__(self)
+        self.position = None
+        self.sprite = None
+        self.rect = None
+        self.display_surf = display_surf
+
         self.color = color
         self.piece = piece
 
         self.set_sprite()
-
-        self.position = None
-        self.sprite, self.rect = utils.load_image()
-        self.display_surf = display_surf
-
 
     def set_position(self, position):
         self.position = position

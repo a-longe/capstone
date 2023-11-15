@@ -15,12 +15,10 @@ move = ''
 
 while True:
     pygame.display.update()
-
-    if fen.split()[-5] == 'b':
-        best_move = uci_handler.get_bestmove(fen, MOVETIME, "")
-        print(best_move)
-        fen = uci_handler.get_fen_after_move(fen, best_move)
-        print(fen)
+    # best_move = uci_handler.get_bestmove(fen, MOVETIME, "")
+    # print(best_move)
+    # fen = uci_handler.get_fen_after_move(fen, best_move)
+    # print(fen)
  
     display.update(fen, game_board)
     
@@ -47,10 +45,8 @@ while True:
             move += event_sqr
             if len(move) == 4:
                 new_fen = uci_handler.get_fen_after_move(fen, move)
-                fen = new_fen
                 display.update(new_fen, game_board)
-                print(move, new_fen)
-                move = ''
+                print(move)
 
             # if the click is on the board (ie: not 'OOB')
             if event_sqr != 'OOB':
@@ -65,10 +61,10 @@ while True:
     if is_dragging and piece_to_drag != None:
         piece_rect = piece_to_drag['piece'].sprite.get_rect()
         piece_rect.move_ip(meh.get_mouse_pos())
-        # print(piece_rect)
+        print(piece_rect)
         piece_to_drag['piece'].display_piece()
         # print(meh.get_board_pos(*meh.get_mouse_pos()))
 
     # board flip interface
-    #if not game_board.flipped:
-        #display.flip(game_board)
+    if not game_board.flipped:
+        display.flip(game_board)

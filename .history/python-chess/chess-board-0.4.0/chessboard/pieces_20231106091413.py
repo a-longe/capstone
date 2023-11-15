@@ -1,6 +1,6 @@
 import os
 import pygame
-import utils.py
+import utils
 
 from chessboard.constants import IMAGE_DIR
 
@@ -18,7 +18,7 @@ class PieceType:
     ROOK = 'ROOK'
 
 
-class Piece(pygame.sprite.Sprite):
+class Piece:
     b_bishop = pygame.image.load(os.path.join(IMAGE_DIR, 'bB.png'))
     b_king = pygame.image.load(os.path.join(IMAGE_DIR, 'bK.png'))
     b_knight = pygame.image.load(os.path.join(IMAGE_DIR, 'bN.png'))
@@ -34,16 +34,15 @@ class Piece(pygame.sprite.Sprite):
     w_rook = pygame.image.load(os.path.join(IMAGE_DIR, 'wR.png'))
 
     def __init__(self, color, piece, display_surf):
-        pygame.sprite.Sprite.__init__(self)
+        self.position = None
+        self.sprite = None
+        self.rect = None
+        self.display_surf = display_surf
+
         self.color = color
         self.piece = piece
 
         self.set_sprite()
-
-        self.position = None
-        self.sprite, self.rect = utils.load_image()
-        self.display_surf = display_surf
-
 
     def set_position(self, position):
         self.position = position

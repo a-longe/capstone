@@ -15,12 +15,10 @@ move = ''
 
 while True:
     pygame.display.update()
-
-    if fen.split()[-5] == 'b':
-        best_move = uci_handler.get_bestmove(fen, MOVETIME, "")
-        print(best_move)
-        fen = uci_handler.get_fen_after_move(fen, best_move)
-        print(fen)
+    # best_move = uci_handler.get_bestmove(fen, MOVETIME, "")
+    # print(best_move)
+    # fen = uci_handler.get_fen_after_move(fen, best_move)
+    # print(fen)
  
     display.update(fen, game_board)
     

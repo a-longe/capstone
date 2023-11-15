@@ -32,5 +32,5 @@ def get_board_pos(x:float, y:float) -> str:
     if not is_found: return "OOB"
     # convert location_indecies into a string
     # print(row_location, square_location)
-    return f'{my_utils.index_to_letter[square_location]}{8 - (row_location)}'
+    return f'{my_utils.index_to_letter[row_location]}{ square_location + 1}'
     

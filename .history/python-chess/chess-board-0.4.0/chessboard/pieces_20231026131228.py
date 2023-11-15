@@ -1,6 +1,6 @@
 import os
 import pygame
-import utils.py
+import utils
 
 from chessboard.constants import IMAGE_DIR
 
@@ -35,15 +35,15 @@ class Piece(pygame.sprite.Sprite):
 
     def __init__(self, color, piece, display_surf):
         pygame.sprite.Sprite.__init__(self)
+        self.position = None
+        self.sprite = None
+        self.rect = None
+        self.display_surf = display_surf
+
         self.color = color
         self.piece = piece
 
         self.set_sprite()
-
-        self.position = None
-        self.sprite, self.rect = utils.load_image()
-        self.display_surf = display_surf
-
 
     def set_position(self, position):
         self.position = position
@@ -58,13 +58,42 @@ class Piece(pygame.sprite.Sprite):
                 case PieceType.QUEEN: self.sprite, self.rect = utils.load_image("wQ.png", -1)
                 case PieceType.ROOK: self.sprite, self.rect = utils.load_image("wR.png", -1)
         elif self.color == PieceColor.BLACK:
-            match self.piece:
-                case PieceType.BISHOP: self.sprite, self.rect = utils.load_image("bB.png", -1)
-                case PieceType.KING: self.sprite, self.rect = utils.load_image("bK.png", -1)
-                case PieceType.KNIGHT: self.sprite, self.rect = utils.load_image("bN.png", -1)
-                case PieceType.PAWN: self.sprite, self.rect = utils.load_image("bP.png", -1)
-                case PieceType.QUEEN: self.sprite, self.rect = utils.load_image("bQ.png", -1)
-                case PieceType.ROOK: self.sprite, self.rect = utils.load_image("bR.png", -1)
         
+        if self.piece == PieceType.BISHOP:
+            if self.color == PieceColor.BLACK:
+                self.sprite = Piece.b_bishop
+            elif self.color == PieceColor.WHITE:
+                self.sprite = Piece.w_bishop
+
+        elif self.piece == PieceType.KING:
+            if self.color == PieceColor.BLACK:
+                self.sprite = Piece.b_king
+            elif self.color == PieceColor.WHITE:
+                self.sprite = Piece.w_king
+
+        elif self.piece == PieceType.KNIGHT:
+            if self.color == PieceColor.BLACK:
+                self.sprite = Piece.b_knight
+            if self.color == PieceColor.WHITE:
+                self.sprite = Piece.w_knight
+
+        elif self.piece == PieceType.PAWN:
+            if self.color == PieceColor.BLACK:
+                self.sprite = Piece.b_pawn
+            elif self.color == PieceColor.WHITE:
+                self.sprite = Piece.w_pawn
+
+        elif self.piece == PieceType.QUEEN:
+            if self.color == PieceColor.BLACK:
+                self.sprite = Piece.b_queen
+            elif self.color == PieceColor.WHITE:
+                self.sprite = Piece.w_queen
+
+        elif self.piece == PieceType.ROOK:
+            if self.color == PieceColor.BLACK:
+                self.sprite = Piece.b_rook
+            elif self.color == PieceColor.WHITE:
+                self.sprite = Piece.w_rook
+
     def display_piece(self):
         self.display_surf.blit(self.sprite, self.position)
