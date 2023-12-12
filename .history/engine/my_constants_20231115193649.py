@@ -1,0 +1,117 @@
+LEN_ROW = 8
+NUM_ROWS = 8
+NUM_SQUARES = 64
+
+STARTING_BLACK_PIECES = int(
+    "11111111"
+    "11111111"
+    "00000000"
+    "00000000"
+    "00000000"
+    "00000000"
+    "00000000"
+    "00000000"
+    , 2)
+
+STARTING_WHITE_PIECES = int(
+    "00000000"
+    "00000000"
+    "00000000"
+    "00000000"
+    "00000000"
+    "00000000"
+    "11111111"
+    "11111111"
+    , 2)
+
+STARTING_PAWNS = int(
+    "00000000"
+    "11111111"
+    "00000000"
+    "00000000"
+    "00000000"
+    "00000000"
+    "11111111"
+    "00000000"
+    , 2) 
+
+STARTING_KNIGHTS = int(
+    "00100100"
+    "00000000"
+    "00000000"
+    "00000000"
+    "00000000"
+    "00000000"
+    "00000000"
+    "00100100"
+    , 2) 
+
+STARTING_BISHOPS = int(
+    "01000010"
+    "00000000"
+    "00000000"
+    "00000000"
+    "00000000"
+    "00000000"
+    "00000000"
+    "01000010"
+    , 2) 
+
+STARTING_ROOKS = int(
+    "10000001"
+    "00000000"
+    "00000000"
+    "00000000"
+    "00000000"
+    "00000000"
+    "00000000"
+    "10000001"
+    , 2)
+
+STARTING_KINGS = int(
+    "00001000"
+    "00000000"
+    "00000000"
+    "00000000"
+    "00000000"
+    "00000000"
+    "00000000"
+    "00001000"
+    , 2)
+
+STARTING_QUEENS = int(
+    "00010000"
+    "00000000"
+    "00000000"
+    "00000000"
+    "00000000"
+    "00000000"
+    "00000000"
+    "00010000"
+    , 2)
+
+STARTING_CASTLING_RIGHTS = {
+    'K':True,
+    'Q':True,
+    'k':True,
+    'q':True
+}
+
+STARTING_BITBOARDS = [
+    STARTING_WHITE_PIECES,
+    STARTING_BLACK_PIECES,
+    STARTING_PAWNS,
+    STARTING_KNIGHTS,
+    STARTING_BISHOPS,
+    STARTING_ROOKS,
+    STARTING_QUEENS,
+    STARTING_KINGS,
+]
+
+STARTING_METADATA = (
+    True,
+    STARTING_CASTLING_RIGHTS,
+    [],
+    0,
+    0
+)
