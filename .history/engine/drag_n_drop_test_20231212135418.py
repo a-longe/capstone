@@ -149,7 +149,7 @@ def game_event_loop(Board):
                         # does player collide with another player
                         collisions = [rect for rect in player.rect.collideobjectsall(player.board.get_players(), key=lambda s : s.rect) if rect.rect.collidepoint(pg.mouse.get_pos())]
                         print(collisions)
-                        if len(collisions) == 1:
+                        if len(collisions) > 1:
                             player.snap_to_square()
                         else:
                             player.rect.center = player.previous_center

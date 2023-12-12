@@ -70,6 +70,9 @@ class Player:
             player_cords = (self.rect.center[0], self.rect.center[1])
             self.rect.topleft = get_snap_cords(*player_cords)
 
+    def get_rect(self):
+        return self.rect
+
 
 
 
@@ -147,12 +150,8 @@ def game_event_loop(Board):
                     # if valid location and is legal move()
                     if player.board.mouse_inside_bounds() and True:
                         # does player collide with another player
-                        collisions = [rect for rect in player.rect.collideobjectsall(player.board.get_players(), key=lambda s : s.rect) if rect.rect.collidepoint(pg.mouse.get_pos())]
-                        print(collisions)
-                        if len(collisions) == 1:
+                        if not [b for b in player.rect.collideobjectsall(player.board.get_players(), key=rect)]:
                             player.snap_to_square()
-                        else:
-                            player.rect.center = player.previous_center
                     # else set cords to last square
                     else:
                         player.rect.center = player.previous_center
