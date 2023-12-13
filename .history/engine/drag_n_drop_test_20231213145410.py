@@ -179,7 +179,11 @@ def game_event_loop(Board):
                         elif player.is_white != colliding_piece[0].is_white:
                             # if colliding with piece with different colour
                             # delete player from player_list and then snap
-                            Board.del_piece(colliding_piece[0])                      
+                            player_to_del = colliding_piece[0]
+                            all_pieces = Board.get_players()  
+                            piece_to_del_index = all_pieces.index(player_to_del)
+                            all_pieces.pop(piece_to_del_index) 
+                            Board.set_players(all_pieces)                        
                             player.snap_to_square()
                         else:
                             player.rect.center = player.previous_center
