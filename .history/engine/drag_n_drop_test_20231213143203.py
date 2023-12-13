@@ -106,9 +106,6 @@ class Board:
 
     def get_players(self):
         return self.players
-    
-    def set_players(self, players):
-        self.players = players
 
     def mouse_inside_bounds(self):
         # hard-coded numbers should be fixed
@@ -167,17 +164,8 @@ def game_event_loop(Board):
                         colliding_piece = [piece_2 for piece_2 in player.rect.collideobjectsall(player.board.get_players()) if piece_2.rect.collidepoint(pg.mouse.get_pos())]
                         colliding_piece.remove(player)
                         print(colliding_piece)
-                        if not colliding_piece:
-                            # if not colliding with any piece
-                            player.snap_to_square()
-                        elif player.is_white != colliding_piece[0].is_white:
-                            # if colliding with piece with different colour
-                            # delete player from player_list and then snap
-                            player_to_del = colliding_piece[0]
-                            all_pieces = Board.get_players()  
-                            piece_to_del_index = all_pieces.index(player_to_del)
-                            all_pieces.pop(piece_to_del_index) 
-                            Board.set_players(all_pieces)                        
+                        if (not colliding_piece) or \
+                        player.is_white != colliding_piece[0].is_white:
                             player.snap_to_square()
                         else:
                             player.rect.center = player.previous_center

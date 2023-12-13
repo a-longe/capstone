@@ -9,8 +9,6 @@ BOTTOM_RIGHT = 900
 SQUARE_SIZE = 100
 SCREEN_SIZE = 1000
 
-RECT_DATA = 0
-GLYPH = 1
 
 def is_even(n):
     return 0 == n % 2
@@ -61,9 +59,8 @@ class Piece:
         # a Piece object has a click attribute that is true if the
         # left mouse button is down and on top of the Piece
         self.click = False
-        self.image = pg.transform.scale(get_piece_img(glyph), (SQUARE_SIZE, 
-                                                               SQUARE_SIZE))
-        self.is_white = glyph.islower()
+        self.image = get_piece_img(glyph)
+        self.image.fill((255, 0, 0))
 
     # Check that the player has been selected and that the mouse will
     # not cause the player to bleed out of bounds.
@@ -98,17 +95,13 @@ class Board:
         self.surface = pg.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
         self.players = []
         for piece_data in positions:
-            self.players.append(Piece(self, piece_data[RECT_DATA],
-                                    piece_data[GLYPH]))
+            self.players.append(Piece(self, piece_data[0], piece_data[1]))
 
     def clear_surface(self):
         self.surface.fill(0)
 
     def get_players(self):
         return self.players
-    
-    def set_players(self, players):
-        self.players = players
 
     def mouse_inside_bounds(self):
         # hard-coded numbers should be fixed
@@ -164,20 +157,9 @@ def game_event_loop(Board):
                     # if valid location and is legal move()
                     if player.board.mouse_inside_bounds() and True:
                         # does player collide with another player
-                        colliding_piece = [piece_2 for piece_2 in player.rect.collideobjectsall(player.board.get_players()) if piece_2.rect.collidepoint(pg.mouse.get_pos())]
-                        colliding_piece.remove(player)
-                        print(colliding_piece)
-                        if not colliding_piece:
-                            # if not colliding with any piece
-                            player.snap_to_square()
-                        elif player.is_white != colliding_piece[0].is_white:
-                            # if colliding with piece with different colour
-                            # delete player from player_list and then snap
-                            player_to_del = colliding_piece[0]
-                            all_pieces = Board.get_players()  
-                            piece_to_del_index = all_pieces.index(player_to_del)
-                            all_pieces.pop(piece_to_del_index) 
-                            Board.set_players(all_pieces)                        
+                        collisions = [rect for rect in player.rect.collideobjectsall(player.board.get_players(), key=lambda s : s.rect) if rect.rect.collidepoint(pg.mouse.get_pos())]
+                        print(collisions)
+                        if len(collisions) == 1:
                             player.snap_to_square()
                         else:
                             player.rect.center = player.previous_center
@@ -193,9 +175,8 @@ def game_event_loop(Board):
 if __name__ == "__main__":
     os.environ['SDL_VIDEO_CENTERED'] = '1'
     pg.init()
-    MyBoard = Board([((100, 100, 100, 100), 'n'),
-                     ((200, 200, 100, 100), 'B'),
-                     ((300, 300, 100, 100), 'K')])
+    MyBoard = Board([((50, 50, 100, 100), 'w'),
+                     ((200, 200, 100, 100), 'B')])
     MyClock = pg.time.Clock()
     while True:
         main(MyBoard)
