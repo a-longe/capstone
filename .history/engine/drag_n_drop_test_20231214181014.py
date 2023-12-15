@@ -20,7 +20,7 @@ def is_odd(n):
     return 1 == n % 2
 
 def black_square(surface, image, rect):
-    image.fill((187,190,100))
+    image.fill(187,190,100)
     surface.blit(image, rect)
 
 

@@ -20,12 +20,12 @@ def is_odd(n):
     return 1 == n % 2
 
 def black_square(surface, image, rect):
-    image.fill((187,190,100))
+    image.fill((210, 180, 140))
     surface.blit(image, rect)
 
 
 def white_square(surface, image, rect):
-    image.fill((234,240,206))
+    image.fill((255, 255, 255))
     surface.blit(image, rect)
 
 def get_snap_cords(x, y) -> Cord:

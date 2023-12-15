@@ -70,5 +70,5 @@ while True:
         # print(meh.get_board_pos(*meh.get_mouse_pos()))
 
     # board flip interface
-    if game_board.flipped:
+    if not game_board.flipped:
         display.flip(game_board)
