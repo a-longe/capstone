@@ -2,8 +2,6 @@ import os
 import sys
 import pygame as pg
 import math
-from copy import deepcopy
-from pprint import pprint
 
 Cord = tuple[int, int]
 TOP_LEFT = 100
@@ -17,12 +15,14 @@ GLYPH = 1
 def is_even(n):
     return 0 == n % 2
 
+
 def is_odd(n):
     return 1 == n % 2
 
 def black_square(surface, image, rect):
     image.fill((187,190,100))
     surface.blit(image, rect)
+
 
 def white_square(surface, image, rect):
     image.fill((234,240,206))
@@ -75,7 +75,7 @@ class Piece:
     def __init__(self, Board, rect, glyph):
         self.board = Board
         self.rect = pg.Rect(rect)
-        self.square = self.get_square_index()
+        # self.cord = square_to_cords(square)
         self.previous_center = self.rect.center
         # a Piece object has a click attribute that is true if the
         # left mouse button is down and on top of the Piece
@@ -97,32 +97,12 @@ class Piece:
             self.rect.center = pg.mouse.get_pos()
         self.board.surface.blit(self.image, self.rect)
 
-    def get_square_index(self) -> int:
-        x, y = self.rect[:2]
-        x -= 100
-        y -= 100
-        x //= 100
-        y //= 100
-        return (y * 8) + x
-
-    def move_to(self, new_square:int):
-        # with new index as key, set value to self
-        # then take original location in map and delete
-        # set self.square to new location
-        old_square = int(self.square)
-        new_square = int(new_square)
-        print(f"move(): from: {old_square} to {new_square}")
-
-        self.board.piece_map[new_square] = self
-        del self.board.piece_map[old_square]
-
-        self.square = self.get_square_index()
-
-
     def snap_to_square(self) -> None:
         if self.board.mouse_inside_bounds():
             player_cords = (self.rect.center[0], self.rect.center[1])
             self.rect.topleft = get_snap_cords(*player_cords)
+
+
 
 
 class Board:
@@ -135,42 +115,38 @@ class Board:
     # inquire about the current state of the board
     def __init__(self, positions):
         self.surface = pg.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
-        self.piece_map = {}
+        self.players = []
         for piece_data in positions:
-            rect = piece_data[RECT_DATA]
-            glyph = piece_data[GLYPH]
-            square:int = self.get_square_index(*rect[:2])
-            self.piece_map[square] = Piece(self, rect, glyph)
+            board_rel_cords = (piece_data[RECT_DATA][0] - 100,
+                               piece_data[RECT_DATA][1] - 100)
+            map_key = sum([int(board_rel_cords[0] / SQUARE_SIZE),
+                          int(board_rel_cords[1] / SQUARE_SIZE)])
+            print(map_key)
+            self.players.append(Piece(self, piece_data[RECT_DATA],
+                                    piece_data[GLYPH]))
 
     def clear_surface(self):
         self.surface.fill(0)
 
     def get_players(self):
-        return self.piece_map.values()
+        return self.players
     
-    def set_piece(self, square:int, piece:Piece):
-        self.piece_map[square] = piece
-
-    def is_inside_bounds(self, x, y) -> bool:
-        return (x >= TOP_LEFT and x <= BOTTOM_RIGHT and 
-                y >= TOP_LEFT and y <= BOTTOM_RIGHT)
+    def set_players(self, players):
+        self.players = players
 
     def mouse_inside_bounds(self):
-        return self.is_inside_bounds(*pg.mouse.get_pos())
+        # hard-coded numbers should be fixed
+        x, y = pg.mouse.get_pos()
+        return (x > TOP_LEFT and x < BOTTOM_RIGHT and 
+                y > TOP_LEFT and y < BOTTOM_RIGHT)
 
-    def get_square_index(self, x, y) -> int:
-        """
-        Precondition: x, y point must be inside board already
-        """
-        # NOTE: this needs to be moved to a seperate function, maybe
-        # get_relative_board_cords()?
-        x -= TOP_LEFT
-        y -= TOP_LEFT
-        x //= SQUARE_SIZE
-        y //= SQUARE_SIZE
-        return (y * 8) + x
-        
+    def collisions(self, a_player):
+        rects = [player.rect for player in self.get_players()]
+        target_rects = [rect for rect in rects if rect != a_player.rect]
+        return a_player.rect.collidelistall(target_rects)
+
     def display_grid(self):
+        # print("I should be displaying...")
         for x, y in square_coords:
             row = x / 100
             column = y / 100
@@ -181,59 +157,48 @@ class Board:
             else:
                 white_square(self.surface, image, rect)
 
-    def del_piece(self, piece:Piece):
-        map_key = self.get_square_index(*piece.rect[:2])
-        del self.piece_map[map_key]
+    def del_piece(self, piece):
+        all_pieces = self.get_players()
+        all_pieces.remove(piece)
+        self.set_players(all_pieces)
 
     def on_mouse_down(self):
-        for piece in self.get_players():
+        for player in self.get_players():
             # The event positions is the mouse coordinates
-            if piece.rect.collidepoint(pg.mouse.get_pos()):
-                if not piece.click:
+            if player.rect.collidepoint(pg.mouse.get_pos()):
+                if not player.click:
                     # store current center
-                    piece.previous_center = piece.rect.center
-                piece.click = True
+                    player.previous_center = player.rect.center
+                player.click = True
 
-    def on_mouse_up(self) -> None: 
-        pieces_to_be_deleted = []
-        pieces_to_be_moved = []
-        for piece in self.get_players():
-            
-            if not piece.click: continue
-
-            # if valid location and is legal move()
-            if piece.board.mouse_inside_bounds() and True:
-                # does piece collide with another piece
-                colliding_piece = [piece_2 for piece_2 in self.get_players() if piece_2.rect.collidepoint(pg.mouse.get_pos())]
-                colliding_piece.remove(piece)
-                if not colliding_piece:
-                    # if not colliding with any piece
-                    piece.snap_to_square()
-                    pieces_to_be_moved.append(piece)
-                elif piece.is_white != colliding_piece[0].is_white:
-                    # if colliding with piece with different colour
-                    # delete piece from piece_list and then snap
-                    pieces_to_be_deleted.append(colliding_piece[0])                      
-                    piece.snap_to_square()
-                    pieces_to_be_moved.append(piece)
-                else:
-                    piece.rect.center = piece.previous_center
-            # else set cords to last square
-            else:
-                piece.rect.center = piece.previous_center
-            piece.click = False
-        for piece_to_del in pieces_to_be_deleted:
-            self.del_piece(piece_to_del)
-        pprint(self.piece_map)
-        for piece_to_be_moved in pieces_to_be_moved:
-            piece_to_be_moved.move_to(piece_to_be_moved.get_square_index())
-
+    def on_mouse_up(self):
+        for player in self.get_players():
+                if player.click:
+                    # if valid location and is legal move()
+                    if player.board.mouse_inside_bounds() and True:
+                        # does player collide with another player
+                        colliding_piece = [piece_2 for piece_2 in self.get_players() if piece_2.rect.collidepoint(pg.mouse.get_pos())]
+                        colliding_piece.remove(player)
+                        if not colliding_piece:
+                            # if not colliding with any piece
+                            player.snap_to_square()
+                        elif player.is_white != colliding_piece[0].is_white:
+                            # if colliding with piece with different colour
+                            # delete player from player_list and then snap
+                            self.del_piece(colliding_piece[0])                      
+                            player.snap_to_square()
+                        else:
+                            player.rect.center = player.previous_center
+                    # else set cords to last square
+                    else:
+                        player.rect.center = player.previous_center
+                player.click = False
 
     def update_board(self):
         self.clear_surface()
         self.display_grid()
-        for piece in self.get_players():
-            piece.update()
+        for player in self.get_players():
+            player.update()
 
 
 def main(Board):
@@ -255,16 +220,10 @@ def game_event_loop(Board):
             sys.exit()
 
 
-test_fen_strings = [
-'8/8/8/8/8/8/8/8 w - - 0 1',
-'kK6/8/8/8/8/8/8/8 w - - 0 1',
-'8/P3N3/2n1P3/2p4k/3Qp3/1qR3rp/3K3P/R5r1 w - - 0 1'
-]
-
 if __name__ == "__main__":
     os.environ['SDL_VIDEO_CENTERED'] = '1'
     pg.init()
-    MyBoard = Board(fen_to_pieces(test_fen_strings[2]))
+    MyBoard = Board(fen_to_pieces('1k6/8/8/8/8/8/8/8 b - - 99 50'))
     MyClock = pg.time.Clock()
     while True:
         main(MyBoard)

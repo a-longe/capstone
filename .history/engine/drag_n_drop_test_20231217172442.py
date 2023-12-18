@@ -105,13 +105,17 @@ class Piece:
         y //= 100
         return (y * 8) + x
 
-    def move_to(self, new_square:int):
+    def snap_to_square(self) -> None:
+        if self.board.mouse_inside_bounds():
+            player_cords = (self.rect.center[0], self.rect.center[1])
+            self.rect.topleft = get_snap_cords(*player_cords)
+
+    def move_to(self, square:int):
         # with new index as key, set value to self
         # then take original location in map and delete
         # set self.square to new location
-        old_square = int(self.square)
-        new_square = int(new_square)
-        print(f"move(): from: {old_square} to {new_square}")
+        old_square = self.square
+        new_square = self.get_square_index()
 
         self.board.piece_map[new_square] = self
         del self.board.piece_map[old_square]
@@ -119,10 +123,6 @@ class Piece:
         self.square = self.get_square_index()
 
 
-    def snap_to_square(self) -> None:
-        if self.board.mouse_inside_bounds():
-            player_cords = (self.rect.center[0], self.rect.center[1])
-            self.rect.topleft = get_snap_cords(*player_cords)
 
 
 class Board:
@@ -196,38 +196,30 @@ class Board:
 
     def on_mouse_up(self) -> None: 
         pieces_to_be_deleted = []
-        pieces_to_be_moved = []
         for piece in self.get_players():
-            
-            if not piece.click: continue
-
-            # if valid location and is legal move()
-            if piece.board.mouse_inside_bounds() and True:
-                # does piece collide with another piece
-                colliding_piece = [piece_2 for piece_2 in self.get_players() if piece_2.rect.collidepoint(pg.mouse.get_pos())]
-                colliding_piece.remove(piece)
-                if not colliding_piece:
-                    # if not colliding with any piece
-                    piece.snap_to_square()
-                    pieces_to_be_moved.append(piece)
-                elif piece.is_white != colliding_piece[0].is_white:
-                    # if colliding with piece with different colour
-                    # delete piece from piece_list and then snap
-                    pieces_to_be_deleted.append(colliding_piece[0])                      
-                    piece.snap_to_square()
-                    pieces_to_be_moved.append(piece)
-                else:
-                    piece.rect.center = piece.previous_center
-            # else set cords to last square
-            else:
-                piece.rect.center = piece.previous_center
-            piece.click = False
+                if piece.click:
+                    # if valid location and is legal move()
+                    if piece.board.mouse_inside_bounds() and True:
+                        # does piece collide with another piece
+                        colliding_piece = [piece_2 for piece_2 in self.get_players() if piece_2.rect.collidepoint(pg.mouse.get_pos())]
+                        colliding_piece.remove(piece)
+                        if not colliding_piece:
+                            # if not colliding with any piece
+                            piece.snap_to_square()
+                        elif piece.is_white != colliding_piece[0].is_white:
+                            # if colliding with piece with different colour
+                            # delete piece from piece_list and then snap
+                            pieces_to_be_deleted.append(colliding_piece[0])                      
+                            piece.snap_to_square()
+                        else:
+                            piece.rect.center = piece.previous_center
+                    # else set cords to last square
+                    else:
+                        piece.rect.center = piece.previous_center
+                piece.click = False
         for piece_to_del in pieces_to_be_deleted:
             self.del_piece(piece_to_del)
         pprint(self.piece_map)
-        for piece_to_be_moved in pieces_to_be_moved:
-            piece_to_be_moved.move_to(piece_to_be_moved.get_square_index())
-
 
     def update_board(self):
         self.clear_surface()
@@ -255,16 +247,17 @@ def game_event_loop(Board):
             sys.exit()
 
 
-test_fen_strings = [
-'8/8/8/8/8/8/8/8 w - - 0 1',
-'kK6/8/8/8/8/8/8/8 w - - 0 1',
-'8/P3N3/2n1P3/2p4k/3Qp3/1qR3rp/3K3P/R5r1 w - - 0 1'
-]
+"""
+Testing Fen Strings:
+8/8/8/8/8/8/8/8 w - - 0 1
+kK6/8/8/8/8/8/8/8 w - - 0 1
+8/P3N3/2n1P3/2p4k/3Qp3/1qR3rp/3K3P/R5r1 w - - 0 1
+"""
 
 if __name__ == "__main__":
     os.environ['SDL_VIDEO_CENTERED'] = '1'
     pg.init()
-    MyBoard = Board(fen_to_pieces(test_fen_strings[2]))
+    MyBoard = Board(fen_to_pieces('kK6/8/8/8/8/8/8/8 w - - 0 1'))
     MyClock = pg.time.Clock()
     while True:
         main(MyBoard)

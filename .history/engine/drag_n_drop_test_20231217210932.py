@@ -198,30 +198,28 @@ class Board:
         pieces_to_be_deleted = []
         pieces_to_be_moved = []
         for piece in self.get_players():
-            
-            if not piece.click: continue
-
-            # if valid location and is legal move()
-            if piece.board.mouse_inside_bounds() and True:
-                # does piece collide with another piece
-                colliding_piece = [piece_2 for piece_2 in self.get_players() if piece_2.rect.collidepoint(pg.mouse.get_pos())]
-                colliding_piece.remove(piece)
-                if not colliding_piece:
-                    # if not colliding with any piece
-                    piece.snap_to_square()
-                    pieces_to_be_moved.append(piece)
-                elif piece.is_white != colliding_piece[0].is_white:
-                    # if colliding with piece with different colour
-                    # delete piece from piece_list and then snap
-                    pieces_to_be_deleted.append(colliding_piece[0])                      
-                    piece.snap_to_square()
-                    pieces_to_be_moved.append(piece)
-                else:
-                    piece.rect.center = piece.previous_center
-            # else set cords to last square
-            else:
-                piece.rect.center = piece.previous_center
-            piece.click = False
+                if piece.click:
+                    # if valid location and is legal move()
+                    if piece.board.mouse_inside_bounds() and True:
+                        # does piece collide with another piece
+                        colliding_piece = [piece_2 for piece_2 in self.get_players() if piece_2.rect.collidepoint(pg.mouse.get_pos())]
+                        colliding_piece.remove(piece)
+                        if not colliding_piece:
+                            # if not colliding with any piece
+                            piece.snap_to_square()
+                            pieces_to_be_moved.append(piece)
+                        elif piece.is_white != colliding_piece[0].is_white:
+                            # if colliding with piece with different colour
+                            # delete piece from piece_list and then snap
+                            pieces_to_be_deleted.append(colliding_piece[0])                      
+                            piece.snap_to_square()
+                            pieces_to_be_moved.append(piece)
+                        else:
+                            piece.rect.center = piece.previous_center
+                    # else set cords to last square
+                    else:
+                        piece.rect.center = piece.previous_center
+                piece.click = False
         for piece_to_del in pieces_to_be_deleted:
             self.del_piece(piece_to_del)
         pprint(self.piece_map)
