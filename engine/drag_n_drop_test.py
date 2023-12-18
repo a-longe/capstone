@@ -109,9 +109,7 @@ class Piece:
     def get_square_index(self) -> int:
         # NOTE: this needs to be moved to a seperate function, maybe
         # get_relative_board_cords()?
-        x, y = self.rect[:2]
-        x -= TOP_LEFT
-        y -= TOP_LEFT
+        x, y = self.board.relative_board_cords(*self.rect[:2])
         x //= SQUARE_SIZE
         y //= SQUARE_SIZE
         return (y * 8) + x
@@ -196,15 +194,15 @@ class Board:
 
     def mouse_inside_bounds(self):
         return self.is_inside_bounds(*pg.mouse.get_pos())
+    
+    def relative_board_cords(self, x, y) -> Cord:
+        return (x-TOP_LEFT, y-TOP_LEFT)
 
     def get_square_index(self, x, y) -> int:
         """
         Precondition: x, y point must be inside board already
         """
-        # NOTE: this needs to be moved to a seperate function, maybe
-        # get_relative_board_cords()?
-        x -= TOP_LEFT
-        y -= TOP_LEFT
+        x, y = self.relative_board_cords(x, y)
         x //= SQUARE_SIZE
         y //= SQUARE_SIZE
         return (y * 8) + x
@@ -276,8 +274,8 @@ class Board:
             piece.update()
 
 class Game:
-    def __init__(self) -> None:
-        self.boards = []
+    def __init__(self, starting_fen=STARTING_FEN) -> None:
+        self.boards = [Board(fen_to_pieces(starting_fen))]
         min_to_sec = lambda m : m * 60
         self.white_time = min_to_sec(5)
         self.black_time = min_to_sec(5)
@@ -286,7 +284,7 @@ class Game:
 
 def main(Board):
     # listen for events and update board in response to them
-    game_event_loop(Board, starting_fen=)
+    game_event_loop(Board)
     Board.update_board()
 
 
