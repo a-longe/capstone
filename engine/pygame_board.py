@@ -36,7 +36,7 @@ BOARD_RECT = (
 )
 
 
-IMAGE_DIR = path.join(path.dirname(path.abspath(__file__)), 'images')
+IMAGE_DIR = os.path.join(path.dirname(path.abspath(__file__)), 'images')
 
 w_tile_img = pg.image.load(path.join(IMAGE_DIR, 'wtile.png'))
 b_tile_img = pg.image.load(path.join(IMAGE_DIR, 'btile.png'))

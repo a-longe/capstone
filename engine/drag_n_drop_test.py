@@ -5,6 +5,7 @@ import math
 from pprint import pprint
 
 Cord = tuple[int, int]
+LEN_ROW = 8
 TOP_LEFT = 100
 BOTTOM_RIGHT = 900
 SQUARE_SIZE = 100
@@ -74,6 +75,7 @@ class Piece:
     def __init__(self, Board, rect, glyph):
         self.board = Board
         self.rect = pg.Rect(rect)
+        self.glyph = glyph
         self.square = self.get_square_index()
         self.previous_center = self.rect.center
         # a Piece object has a click attribute that is true if the
@@ -97,19 +99,21 @@ class Piece:
         self.board.surface.blit(self.image, self.rect)
 
     def get_square_index(self) -> int:
+        # NOTE: this needs to be moved to a seperate function, maybe
+        # get_relative_board_cords()?
         x, y = self.rect[:2]
-        x -= 100
-        y -= 100
-        x //= 100
-        y //= 100
+        x -= TOP_LEFT
+        y -= TOP_LEFT
+        x //= SQUARE_SIZE
+        y //= SQUARE_SIZE
         return (y * 8) + x
 
     def move_to(self, new_square:int):
         # with new index as key, set value to self
         # then take original location in map and delete
         # set self.square to new location
-        old_square = int(self.square)
-        new_square = int(new_square)
+        old_square = self.square
+        if new_square == old_square: return
         print(f"move(): from: {old_square} to {new_square}")
 
         self.board.piece_map[new_square] = self
@@ -123,6 +127,10 @@ class Piece:
             player_cords = (self.rect.center[0], self.rect.center[1])
             self.rect.topleft = get_snap_cords(*player_cords)
 
+
+class Bishop(Piece):
+    def get_legal_moves(self) -> list[tuple[int, int]]:
+        pass
 
 class Board:
     # Each position corresponds to the arguments needed to instantiate
@@ -140,6 +148,30 @@ class Board:
             glyph = piece_data[GLYPH]
             square:int = self.get_square_index(*rect[:2])
             self.piece_map[square] = Piece(self, rect, glyph)
+
+    def get_fen(self) -> str:
+        fen = ''
+        for c_i in range(LEN_ROW):
+            consecutive_empty = 0
+            for r_i in range(LEN_ROW):
+                square_index = (8*c_i) + r_i
+                try:
+                    glyph = self.piece_map[square_index].glyph
+                    if consecutive_empty > 0:
+                        fen += str(consecutive_empty)
+                        consecutive_empty = 0
+                    fen += glyph
+                except KeyError:
+                    consecutive_empty += 1
+            if consecutive_empty > 0:
+                fen += str(consecutive_empty)
+            fen += '/'
+        fen = fen[:-1] # remove last slash, easier than checking if its last row
+
+        fen += 'w - - 0 1'
+        return fen
+
+
 
     def clear_surface(self):
         self.surface.fill(0)
@@ -205,11 +237,12 @@ class Board:
                 # does piece collide with another piece
                 colliding_piece = [piece_2 for piece_2 in self.get_players() if piece_2.rect.collidepoint(pg.mouse.get_pos())]
                 colliding_piece.remove(piece)
+                # square_index = Board.get_square_index(*pg.mouse.get_pos())
                 if not colliding_piece:
                     # if not colliding with any piece
                     piece.snap_to_square()
                     pieces_to_be_moved.append(piece)
-                elif piece.is_white != colliding_piece[0].is_white:
+                elif piece.is_white != colliding_piece[0].is_white: # is same or different colour
                     # if colliding with piece with different colour
                     # delete piece from piece_list and then snap
                     pieces_to_be_deleted.append(colliding_piece[0])                      
@@ -223,10 +256,9 @@ class Board:
             piece.click = False
         for piece_to_del in pieces_to_be_deleted:
             self.del_piece(piece_to_del)
-        pprint(self.piece_map)
         for piece_to_be_moved in pieces_to_be_moved:
             piece_to_be_moved.move_to(piece_to_be_moved.get_square_index())
-
+        pprint(self.piece_map)
 
     def update_board(self):
         self.clear_surface()

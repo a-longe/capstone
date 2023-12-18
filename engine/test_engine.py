@@ -1,17 +1,9 @@
-from board import Board
-import my_constants
+import drag_n_drop_test as engine
 
 def test_example() -> None:
     assert True
 
-def test_get_fen() -> None:
-    board = Board(my_constants.STARTING_PIECE_LIST, 
-                my_constants.STARTING_EN_PASSANT_TARGET, 
-                my_constants.STARTING_CASTLING_RIGHTS, 
-                my_constants.STARTING_IS_WHITE, 
-                my_constants.STARTING_HALFMOVE_CLOCK, 
-                my_constants.STARTING_FULLMOVE_CLOCK)
-    assert board.get_fen() == my_constants.STARTING_FEN
+def test_get_and_set_fen() -> None:
     with open('random_fens.txt') as file_handler:
         for fen in file_handler:
             fen = fen.strip()

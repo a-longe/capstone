@@ -9,3 +9,8 @@
 ## Pull Instructions
 
 - Pull changes from github to local `git pull github main`
+
+## Remove files from git repo
+
+- remove all files from git repo `git rm -r --cached .`
+- add back files following .gitignore by updating
