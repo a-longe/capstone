@@ -2,7 +2,6 @@ import os
 import sys
 import pygame as pg
 import math
-from copy import deepcopy
 from pprint import pprint
 
 Cord = tuple[int, int]
