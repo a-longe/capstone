@@ -2,9 +2,11 @@ import os
 import sys
 import pygame as pg
 import math
+from random import randint
 from pprint import pprint
 
 Cord = tuple[int, int]
+STARTING_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 LEN_ROW = 8
 TOP_LEFT = 100
 BOTTOM_RIGHT = 900
@@ -97,6 +99,12 @@ class Piece:
         if (self.click):
             self.rect.center = pg.mouse.get_pos()
         self.board.surface.blit(self.image, self.rect)
+
+    def return_to_previous(self) -> None:
+        self.rect.center = self.previous_center
+
+    def is_same_colour(self, piece_2:'Piece') -> bool:
+        return self.is_white == piece_2.is_white
 
     def get_square_index(self) -> int:
         # NOTE: this needs to be moved to a seperate function, maybe
@@ -234,25 +242,26 @@ class Board:
 
             # if valid location and is legal move()
             if piece.board.mouse_inside_bounds() and True:
+                mouse_square = self.get_square_index(*pg.mouse.get_pos())
                 # does piece collide with another piece
-                colliding_piece = [piece_2 for piece_2 in self.get_players() if piece_2.rect.collidepoint(pg.mouse.get_pos())]
-                colliding_piece.remove(piece)
-                # square_index = Board.get_square_index(*pg.mouse.get_pos())
-                if not colliding_piece:
+                if mouse_square in self.piece_map.keys():
+                    # mouse_square musst be in map
+                    piece_to_take = self.piece_map[mouse_square]
+                    if not piece.is_same_colour(piece_to_take):
+                        # if colliding with piece with different colour
+                        # delete piece from piece_list and then snap
+                        pieces_to_be_deleted.append(piece_to_take)                      
+                        piece.snap_to_square()
+                        pieces_to_be_moved.append(piece)
+                    else:
+                        piece.return_to_previous()
+                else:
                     # if not colliding with any piece
                     piece.snap_to_square()
                     pieces_to_be_moved.append(piece)
-                elif piece.is_white != colliding_piece[0].is_white: # is same or different colour
-                    # if colliding with piece with different colour
-                    # delete piece from piece_list and then snap
-                    pieces_to_be_deleted.append(colliding_piece[0])                      
-                    piece.snap_to_square()
-                    pieces_to_be_moved.append(piece)
-                else:
-                    piece.rect.center = piece.previous_center
             # else set cords to last square
             else:
-                piece.rect.center = piece.previous_center
+                piece.return_to_previous()
             piece.click = False
         for piece_to_del in pieces_to_be_deleted:
             self.del_piece(piece_to_del)
@@ -266,10 +275,18 @@ class Board:
         for piece in self.get_players():
             piece.update()
 
+class Game:
+    def __init__(self) -> None:
+        self.boards = []
+        min_to_sec = lambda m : m * 60
+        self.white_time = min_to_sec(5)
+        self.black_time = min_to_sec(5)
+
+
 
 def main(Board):
     # listen for events and update board in response to them
-    game_event_loop(Board)
+    game_event_loop(Board, starting_fen=)
     Board.update_board()
 
 
@@ -285,11 +302,16 @@ def game_event_loop(Board):
             pg.quit()
             sys.exit()
 
+def get_random_fen() -> str:
+    with open('engine/random_fens.txt') as fen_file:
+        fens = fen_file.readlines()
+    return fens[randint(0, len(fens) - 1)]
+
 
 test_fen_strings = [
 '8/8/8/8/8/8/8/8 w - - 0 1',
 'kK6/8/8/8/8/8/8/8 w - - 0 1',
-'8/P3N3/2n1P3/2p4k/3Qp3/1qR3rp/3K3P/R5r1 w - - 0 1'
+get_random_fen()
 ]
 
 if __name__ == "__main__":
