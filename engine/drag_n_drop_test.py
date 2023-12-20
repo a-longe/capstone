@@ -8,6 +8,8 @@ from pprint import pprint
 
 Cord = tuple[int, int]
 BoardInput = list[tuple[tuple[int, int, int, int], str]]
+FEN_ACTIVE_COLOUR = 1
+FEN_MOVE_COUNT = 5
 STARTING_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 LEN_ROW = 8
 TOP_LEFT = 100
@@ -112,6 +114,13 @@ class Piece:
     def is_same_colour(self, piece_2:'Piece') -> bool:
         return self.is_white == piece_2.is_white
 
+    def can_pickup(self) -> bool:
+        """
+        Would not be able to be picked up if piece cant help with a check, or if
+        its not the active colour
+        """ 
+        return self.is_white == self.board.is_white_turn
+
     def get_square_index(self) -> int:
         # NOTE: this needs to be moved to a seperate function, maybe
         # get_relative_board_cords()?
@@ -153,7 +162,9 @@ class Board:
 
     # It has a number of methods that exist so other parts of the program can
     # inquire about the current state of the board
-    def __init__(self, game, positions):
+    def __init__(self, game, positions:BoardInput, is_white_turn:bool, 
+        move_count:int):
+
         self.game = game
         self.surface = pg.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
         self.piece_map = {}
@@ -162,6 +173,8 @@ class Board:
             glyph = piece_data[GLYPH]
             square:int = self.get_square_index(*rect[:2])
             self.piece_map[square] = Piece(self, rect, glyph)
+        self.is_white_turn = is_white_turn
+        self.move_count = move_count
 
     def get_fen(self) -> str:
         fen = ''
@@ -206,6 +219,9 @@ class Board:
     def relative_board_cords(self, x, y) -> Cord:
         return (x-TOP_LEFT, y-TOP_LEFT)
 
+    def switch_is_white_turn(self) -> str:
+        return not self.is_white_turn
+
     def get_square_index(self, x, y) -> int:
         """
         Precondition: x, y point must be inside board already
@@ -233,7 +249,8 @@ class Board:
     def on_mouse_down(self):
         for piece in self.get_players():
             # The event positions is the mouse coordinates
-            if piece.rect.collidepoint(pg.mouse.get_pos()):
+            if piece.rect.collidepoint(pg.mouse.get_pos()) and \
+               piece.can_pickup():
                 if not piece.click:
                     # store current center
                     piece.previous_center = piece.rect.center
@@ -291,7 +308,9 @@ class Board:
         new_piece_map = self.piece_map
         new_piece_map[start_square].move_to(end_square)
         board_input = piece_map_to_board_input(new_piece_map)
-        return Board(self.game, board_input)
+        new_move_count = self.move_count + 1
+        return Board(self.game, board_input, self.switch_is_white_turn(),
+                     new_move_count)
 
 
     def update_board(self):
@@ -302,10 +321,15 @@ class Board:
 
 class Game:
     def __init__(self, starting_fen=STARTING_FEN) -> None:
-        self.boards = [Board(self, fen_to_pieces(starting_fen))]
+        fen_componants = starting_fen.split(' ')
+        is_white_turn = fen_componants[FEN_ACTIVE_COLOUR] == 'w'
+        move_count = int(fen_componants[FEN_MOVE_COUNT])
+        self.boards = [Board(self, fen_to_pieces(starting_fen), is_white_turn, 
+                             move_count)]
         min_to_sec = lambda m : m * 60
         self.white_time = min_to_sec(5)
         self.black_time = min_to_sec(5)
+        self.is_game_over = False
 
     def get_current_board(self):
         return self.boards[-1]
@@ -352,7 +376,7 @@ if __name__ == "__main__":
     pg.init()
     game = Game()
     MyClock = pg.time.Clock()
-    while True:
+    while not game.is_game_over:
         main(game)
         pg.display.update()
         MyClock.tick(60)
