@@ -3,9 +3,11 @@ import sys
 import pygame as pg
 import math
 from random import randint
+from copy import deepcopy
 from pprint import pprint
 
 Cord = tuple[int, int]
+BoardInput = list[tuple[tuple[int, int, int, int], str]]
 STARTING_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 LEN_ROW = 8
 TOP_LEFT = 100
@@ -34,7 +36,7 @@ def get_snap_cords(x, y) -> Cord:
     return (math.floor(x / SQUARE_SIZE) * SQUARE_SIZE,
             math.floor(y / SQUARE_SIZE) * SQUARE_SIZE)
 
-def fen_to_pieces(fen) -> list[tuple[tuple[int, int, int, int], str]]:
+def fen_to_pieces(fen) -> BoardInput:
     lo_pieces = []
     pieces = fen.split(' ')[0]
     rows = pieces.split('/')
@@ -52,6 +54,10 @@ def fen_to_pieces(fen) -> list[tuple[tuple[int, int, int, int], str]]:
             c_i += 1
         r_i += 1
     return lo_pieces
+
+def piece_map_to_board_input(piece_map:dict[int:'Piece']) -> BoardInput:
+    pieces = piece_map.values()
+    return [(piece.rect, piece.glyph) for piece in pieces]
 
 
 IMAGE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'images')
@@ -128,6 +134,7 @@ class Piece:
         self.square = self.get_square_index()
 
 
+
     def snap_to_square(self) -> None:
         if self.board.mouse_inside_bounds():
             player_cords = (self.rect.center[0], self.rect.center[1])
@@ -146,7 +153,8 @@ class Board:
 
     # It has a number of methods that exist so other parts of the program can
     # inquire about the current state of the board
-    def __init__(self, positions):
+    def __init__(self, game, positions):
+        self.game = game
         self.surface = pg.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
         self.piece_map = {}
         for piece_data in positions:
@@ -233,7 +241,7 @@ class Board:
 
     def on_mouse_up(self) -> None: 
         pieces_to_be_deleted = []
-        pieces_to_be_moved = []
+        pieces_to_be_moved = [] 
         for piece in self.get_players():
             
             if not piece.click: continue
@@ -264,8 +272,27 @@ class Board:
         for piece_to_del in pieces_to_be_deleted:
             self.del_piece(piece_to_del)
         for piece_to_be_moved in pieces_to_be_moved:
-            piece_to_be_moved.move_to(piece_to_be_moved.get_square_index())
-        pprint(self.piece_map)
+            new_square = piece_to_be_moved.get_square_index()
+            old_square = piece_to_be_moved.square
+            self.game.add_board(self.get_board_after_move(old_square,
+                                                          new_square))
+            print(f"move #{len(self.game.boards) - 1}")
+        #pprint(self.piece_map)
+
+
+    def get_board_after_move(self, start_square:int, end_square:int) -> 'Board':
+        '''
+        1. determine the piece map after a move
+            a.
+        2. convert from piece map back to the format we used to instantiate
+            a board [(rect, glyph)]
+        3. return said board
+        '''
+        new_piece_map = self.piece_map
+        new_piece_map[start_square].move_to(end_square)
+        board_input = piece_map_to_board_input(new_piece_map)
+        return Board(self.game, board_input)
+
 
     def update_board(self):
         self.clear_surface()
@@ -275,33 +302,41 @@ class Board:
 
 class Game:
     def __init__(self, starting_fen=STARTING_FEN) -> None:
-        self.boards = [Board(fen_to_pieces(starting_fen))]
+        self.boards = [Board(self, fen_to_pieces(starting_fen))]
         min_to_sec = lambda m : m * 60
         self.white_time = min_to_sec(5)
         self.black_time = min_to_sec(5)
 
+    def get_current_board(self):
+        return self.boards[-1]
+
+    def add_board(self, board) -> None:
+        self.boards.append(board)
 
 
-def main(Board):
+
+def main(game):
     # listen for events and update board in response to them
-    game_event_loop(Board)
-    Board.update_board()
+    cur_board = game.get_current_board()
+    game_event_loop(game)
+    cur_board.update_board()
 
 
 # Notice that the event loop has been given its own function. This makes
 # the program easier to understand.
-def game_event_loop(Board):
+def game_event_loop(game):
+    cur_board = game.get_current_board()
     for event in pg.event.get():
         if event.type == pg.MOUSEBUTTONDOWN:
-            Board.on_mouse_down()
+            cur_board.on_mouse_down()
         elif event.type == pg.MOUSEBUTTONUP:
-            Board.on_mouse_up()
+            cur_board.on_mouse_up()
         elif event.type == pg.QUIT:
             pg.quit()
             sys.exit()
 
 def get_random_fen() -> str:
-    with open('engine/random_fens.txt') as fen_file:
+    with open('random_fens.txt') as fen_file:
         fens = fen_file.readlines()
     return fens[randint(0, len(fens) - 1)]
 
@@ -315,9 +350,9 @@ get_random_fen()
 if __name__ == "__main__":
     os.environ['SDL_VIDEO_CENTERED'] = '1'
     pg.init()
-    MyBoard = Board(fen_to_pieces(test_fen_strings[2]))
+    game = Game()
     MyClock = pg.time.Clock()
     while True:
-        main(MyBoard)
+        main(game)
         pg.display.update()
         MyClock.tick(60)
