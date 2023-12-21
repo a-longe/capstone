@@ -26,6 +26,25 @@ def is_even(n):
 def is_odd(n):
     return 1 == n % 2
 
+def my_divmod(num, divisor)->tuple[int, int]:
+    if num < 0:
+        is_neg = -1
+    else:
+        is_neg = 1
+
+    num = abs(num)
+    return is_neg*(num//divisor), is_neg*(num%divisor)
+
+def convert_piece(piece:'Piece') -> None:
+    pass
+
+def add_tuples(t1:tuple, t2:tuple) -> tuple:
+    """Precondition: tuples must both be len(2)"""
+    return (t1[0] + t2[0], t1[1] + t2[1])
+
+def multiply_in_tuple(t1:tuple[int, int], multiplier:int) -> tuple[int, int]:
+    return (t1[0] * multiplier, t1[1] * multiplier)
+
 def black_square(surface, image, rect):
     image.fill((187,190,100))
     surface.blit(image, rect)
@@ -34,9 +53,38 @@ def white_square(surface, image, rect):
     image.fill((234,240,206))
     surface.blit(image, rect)
 
+def blue_square(surface, image, rect):
+    image.fill((100, 100, 250))
+    surface.blit(image, rect)
+
+def make_squares_blue(surface, squares:list[int]) -> None:
+    for square in squares:
+        x, y = my_divmod(square, 8)[1] * SQUARE_SIZE + 100, my_divmod(square, 8)[0] * SQUARE_SIZE + 100
+        rect = pg.Rect([x, y, 100, 100])
+        image = pg.Surface(rect.size).convert()
+        blue_square(surface, image, rect)
+
 def get_snap_cords(x, y) -> Cord:
     return (math.floor(x / SQUARE_SIZE) * SQUARE_SIZE,
             math.floor(y / SQUARE_SIZE) * SQUARE_SIZE)
+
+def is_possible_square_r_c(square:tuple[int, int]) -> bool:
+    return (0 <= square[0] <= 7) and (0 <= square[1] <= 7)
+
+def r_c_to_int(square:tuple[int, int]) -> int:
+    return square[0]*8 + square[1]
+
+def get_square_after_move(start:int, offset_r_c:tuple[int, int]) -> int:
+    start_r_c = my_divmod(start, 8)
+    new_square_r_c = add_tuples(start_r_c, offset_r_c)
+    return r_c_to_int(new_square_r_c)
+
+def will_move_out(starting_square:int, offset_r_c:tuple[int, int]) -> bool:
+    square_r_c = my_divmod(starting_square, 8)
+    new_square_r_c = add_tuples(square_r_c, offset_r_c)
+    will_go_out = not is_possible_square_r_c(new_square_r_c)
+    print(f"the move: {square_r_c} with offset {offset_r_c} goes to{new_square_r_c} and will_go_out = {will_go_out}")
+    return will_go_out
 
 def fen_to_pieces(fen) -> BoardInput:
     lo_pieces = []
@@ -122,8 +170,6 @@ class Piece:
         return self.is_white == self.board.is_white_turn
 
     def get_square_index(self) -> int:
-        # NOTE: this needs to be moved to a seperate function, maybe
-        # get_relative_board_cords()?
         x, y = self.board.relative_board_cords(*self.rect[:2])
         x //= SQUARE_SIZE
         y //= SQUARE_SIZE
@@ -142,6 +188,24 @@ class Piece:
 
         self.square = self.get_square_index()
 
+    def get_sliding_moves(self, offset:tuple[int, int]) -> list[int, int]:
+        start_square = self.square
+        depth = 1
+        valid_moves = []
+        while not will_move_out(start_square, multiply_in_tuple(offset, depth)):
+            new_square = get_square_after_move(start_square, multiply_in_tuple(offset, depth))
+            print(new_square)
+            if new_square in self.board.piece_map.keys():
+                if not self.board.piece_map[new_square].is_same_colour(self):
+                    # if the piece is not the same colour as this one
+                    valid_moves.append((start_square, new_square))
+                break   
+            else:
+                # empty square
+                valid_moves.append((start_square, new_square))
+                depth += 1
+        return valid_moves
+
 
 
     def snap_to_square(self) -> None:
@@ -151,8 +215,18 @@ class Piece:
 
 
 class Bishop(Piece):
+    def __init__(self, board, rect, glyph):
+        Piece.__init__(self, board, rect, glyph)
+
+
     def get_legal_moves(self) -> list[tuple[int, int]]:
-        pass
+        OFFSETS = ((-1, -1) ,(-1, 1), (1, 1), (1, -1))
+        valid_moves = []
+        for offset in OFFSETS:
+            valid_moves += self.get_sliding_moves(offset)
+        return valid_moves
+
+
 
 class Board:
     # Each position corresponds to the arguments needed to instantiate
@@ -172,7 +246,9 @@ class Board:
             rect = piece_data[RECT_DATA]
             glyph = piece_data[GLYPH]
             square:int = self.get_square_index(*rect[:2])
-            self.piece_map[square] = Piece(self, rect, glyph)
+            match glyph:
+                case 'b' | 'B':
+                    self.piece_map[square] = Bishop(self, rect, glyph)
         self.is_white_turn = is_white_turn
         self.move_count = move_count
 
@@ -255,6 +331,11 @@ class Board:
                     # store current center
                     piece.previous_center = piece.rect.center
                 piece.click = True
+                squares = list(map(lambda t : t[1], self.game.get_current_board().piece_map[piece.get_square_index()].get_legal_moves()))
+                print(self.game.get_current_board())
+                make_squares_blue(self.game.get_current_board().surface, squares)
+                print(self)
+
 
     def on_mouse_up(self) -> None: 
         pieces_to_be_deleted = []
@@ -268,7 +349,7 @@ class Board:
                 mouse_square = self.get_square_index(*pg.mouse.get_pos())
                 # does piece collide with another piece
                 if mouse_square in self.piece_map.keys():
-                    # mouse_square musst be in map
+                    # mouse_square must be in map
                     piece_to_take = self.piece_map[mouse_square]
                     if not piece.is_same_colour(piece_to_take):
                         # if colliding with piece with different colour
@@ -360,22 +441,24 @@ def game_event_loop(game):
             sys.exit()
 
 def get_random_fen() -> str:
-    with open('random_fens.txt') as fen_file:
+    with open('/home/alonge/Documents/code/capstone/engine/random_fens.txt') as fen_file:
         fens = fen_file.readlines()
-    return fens[randint(0, len(fens) - 1)]
-
+    fen = fens[randint(0, len(fens) - 1)]
+    print(fen)
+    return fen
 
 test_fen_strings = [
 '8/8/8/8/8/8/8/8 w - - 0 1',
 'kK6/8/8/8/8/8/8/8 w - - 0 1',
+'8/8/8/3bB3/8/8/8/8 b - - 0 1',
 get_random_fen()
 ]
 
 if __name__ == "__main__":
     os.environ['SDL_VIDEO_CENTERED'] = '1'
     pg.init()
-    game = Game()
-    MyClock = pg.time.Clock()
+    game = Game(test_fen_strings[2])
+    MyClock = pg.time.Clock()   
     while not game.is_game_over:
         main(game)
         pg.display.update()
