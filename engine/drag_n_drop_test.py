@@ -322,6 +322,10 @@ class Board:
         map_key = self.get_square_index(*piece.rect[:2])
         del self.piece_map[map_key]
 
+    def get_clicked_piece(self) -> Piece:
+        for piece in self.piece_map.values():
+            if piece.click: return piece
+
     def on_mouse_down(self):
         for piece in self.get_players():
             # The event positions is the mouse coordinates
@@ -332,9 +336,7 @@ class Board:
                     piece.previous_center = piece.rect.center
                 piece.click = True
                 squares = list(map(lambda t : t[1], self.game.get_current_board().piece_map[piece.get_square_index()].get_legal_moves()))
-                print(self.game.get_current_board())
                 make_squares_blue(self.game.get_current_board().surface, squares)
-                print(self)
 
 
     def on_mouse_up(self) -> None: 
@@ -367,6 +369,8 @@ class Board:
             else:
                 piece.return_to_previous()
             piece.click = False
+
+
         for piece_to_del in pieces_to_be_deleted:
             self.del_piece(piece_to_del)
         for piece_to_be_moved in pieces_to_be_moved:
@@ -458,7 +462,7 @@ if __name__ == "__main__":
     os.environ['SDL_VIDEO_CENTERED'] = '1'
     pg.init()
     game = Game(test_fen_strings[2])
-    MyClock = pg.time.Clock()   
+    MyClock = pg.time.Clock()
     while not game.is_game_over:
         main(game)
         pg.display.update()
