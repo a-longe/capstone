@@ -109,6 +109,8 @@ def piece_map_to_board_input(piece_map:dict[int:'Piece']) -> BoardInput:
     pieces = piece_map.values()
     return [(piece.rect, piece.glyph) for piece in pieces]
 
+def get_move_destination(move:tuple[int, int]) -> int:
+    return move[1]
 
 IMAGE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'images')
 
@@ -226,6 +228,17 @@ class Bishop(Piece):
             valid_moves += self.get_sliding_moves(offset)
         return valid_moves
 
+class Rook(Piece):
+    def __init__(self, board, rect, glyph):
+        Piece.__init__(self, board, rect, glyph)
+
+
+    def get_legal_moves(self) -> list[tuple[int, int]]:
+        OFFSETS = ((1, 0) ,(-1, 0), (0, 1), (0, -1))
+        valid_moves = []
+        for offset in OFFSETS:
+            valid_moves += self.get_sliding_moves(offset)
+        return valid_moves
 
 
 class Board:
@@ -248,6 +261,8 @@ class Board:
             match glyph:
                 case 'b' | 'B':
                     self.piece_map[square] = Bishop(self, rect, glyph)
+                case 'r' | 'R':
+                    self.piece_map[square] = Rook(self, rect, glyph)
         self.is_white_turn = is_white_turn
         self.move_count = move_count
 
@@ -320,8 +335,6 @@ class Board:
                     piece.previous_center = piece.rect.center
                 piece.click = True
                 squares = list(map(lambda t : t[1], self.game.get_current_board().piece_map[piece.get_square_index()].get_legal_moves()))
-                make_squares_blue(self.game.surface, squares)
-                pg.display.update()
 
 
     def on_mouse_up(self) -> None: 
@@ -414,6 +427,8 @@ class Game:
         self.clear_surface()
         self.display_grid()
         for piece in self.get_current_board().get_players():
+            if piece.click:
+                make_squares_blue(self.surface, [get_move_destination(move) for move in piece.get_legal_moves()])
             piece.update()
 
     def get_current_board(self):
@@ -453,7 +468,7 @@ def get_random_fen() -> str:
 test_fen_strings = [
 '8/8/8/8/8/8/8/8 w - - 0 1',
 'kK6/8/8/8/8/8/8/8 w - - 0 1',
-'8/8/8/3bB3/8/8/8/8 b - - 0 1',
+'8/8/8/3bB3/3rR3/8/8/8 b - - 0 1',
 get_random_fen()
 ]
 
