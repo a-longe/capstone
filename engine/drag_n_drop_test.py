@@ -154,7 +154,7 @@ class Piece:
     def update(self):
         if (self.click):
             self.rect.center = pg.mouse.get_pos()
-        self.board.surface.blit(self.image, self.rect)
+        self.board.game.surface.blit(self.image, self.rect)
 
     def return_to_previous(self) -> None:
         self.rect.center = self.previous_center
@@ -240,7 +240,6 @@ class Board:
         move_count:int):
 
         self.game = game
-        self.surface = pg.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
         self.piece_map = {}
         for piece_data in positions:
             rect = piece_data[RECT_DATA]
@@ -275,10 +274,6 @@ class Board:
         return fen
 
 
-
-    def clear_surface(self):
-        self.surface.fill(0)
-
     def get_players(self):
         return self.piece_map.values()
     
@@ -306,17 +301,6 @@ class Board:
         x //= SQUARE_SIZE
         y //= SQUARE_SIZE
         return (y * 8) + x
-        
-    def display_grid(self):
-        for x, y in square_coords:
-            row = x / 100
-            column = y / 100
-            rect = pg.Rect([x, y, 100, 100])
-            image = pg.Surface(rect.size).convert()
-            if not (is_odd(row) ^ is_odd(column)):
-                black_square(self.surface, image, rect)
-            else:
-                white_square(self.surface, image, rect)
 
     def del_piece(self, piece:Piece):
         map_key = self.get_square_index(*piece.rect[:2])
@@ -336,7 +320,8 @@ class Board:
                     piece.previous_center = piece.rect.center
                 piece.click = True
                 squares = list(map(lambda t : t[1], self.game.get_current_board().piece_map[piece.get_square_index()].get_legal_moves()))
-                make_squares_blue(self.game.get_current_board().surface, squares)
+                make_squares_blue(self.game.surface, squares)
+                pg.display.update()
 
 
     def on_mouse_up(self) -> None: 
@@ -398,12 +383,6 @@ class Board:
                      new_move_count)
 
 
-    def update_board(self):
-        self.clear_surface()
-        self.display_grid()
-        for piece in self.get_players():
-            piece.update()
-
 class Game:
     def __init__(self, starting_fen=STARTING_FEN) -> None:
         fen_componants = starting_fen.split(' ')
@@ -411,10 +390,31 @@ class Game:
         move_count = int(fen_componants[FEN_MOVE_COUNT])
         self.boards = [Board(self, fen_to_pieces(starting_fen), is_white_turn, 
                              move_count)]
+        self.surface = pg.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
         min_to_sec = lambda m : m * 60
         self.white_time = min_to_sec(5)
         self.black_time = min_to_sec(5)
         self.is_game_over = False
+
+    def display_grid(self):
+        for x, y in square_coords:
+            row = x / 100
+            column = y / 100
+            rect = pg.Rect([x, y, 100, 100])
+            image = pg.Surface(rect.size).convert()
+            if not (is_odd(row) ^ is_odd(column)):
+                black_square(self.surface, image, rect)
+            else:
+                white_square(self.surface, image, rect)
+
+    def clear_surface(self):
+        self.surface.fill(0)
+
+    def update_board(self):
+        self.clear_surface()
+        self.display_grid()
+        for piece in self.get_current_board().get_players():
+            piece.update()
 
     def get_current_board(self):
         return self.boards[-1]
@@ -426,9 +426,8 @@ class Game:
 
 def main(game):
     # listen for events and update board in response to them
-    cur_board = game.get_current_board()
     game_event_loop(game)
-    cur_board.update_board()
+    game.update_board()
 
 
 # Notice that the event loop has been given its own function. This makes
