@@ -83,7 +83,7 @@ def will_move_out(starting_square:int, offset_r_c:tuple[int, int]) -> bool:
     square_r_c = my_divmod(starting_square, 8)
     new_square_r_c = add_tuples(square_r_c, offset_r_c)
     will_go_out = not is_possible_square_r_c(new_square_r_c)
-    print(f"the move: {square_r_c} with offset {offset_r_c} goes to{new_square_r_c} and will_go_out = {will_go_out}")
+    #print(f"the move: {square_r_c} with offset {offset_r_c} goes to{new_square_r_c} and will_go_out = {will_go_out}")
     return will_go_out
 
 def fen_to_pieces(fen) -> BoardInput:
@@ -196,7 +196,6 @@ class Piece:
         valid_moves = []
         while not will_move_out(start_square, multiply_in_tuple(offset, depth)):
             new_square = get_square_after_move(start_square, multiply_in_tuple(offset, depth))
-            print(new_square)
             if new_square in self.board.piece_map.keys():
                 if not self.board.piece_map[new_square].is_same_colour(self):
                     # if the piece is not the same colour as this one
@@ -429,6 +428,8 @@ class Game:
         for piece in self.get_current_board().get_players():
             if piece.click:
                 make_squares_blue(self.surface, [get_move_destination(move) for move in piece.get_legal_moves()])
+
+        for piece in self.get_current_board().get_players():
             piece.update()
 
     def get_current_board(self):
