@@ -105,6 +105,9 @@ def fen_to_pieces(fen) -> BoardInput:
         r_i += 1
     return lo_pieces
 
+def fen_to_board_input(fen:str) -> BoardInput:
+    pass
+
 def piece_map_to_board_input(piece_map:dict[int:'Piece']) -> BoardInput:
     pieces = piece_map.values()
     return [(piece.rect, piece.glyph) for piece in pieces]
@@ -156,7 +159,7 @@ class Piece:
     def update(self):
         if (self.click):
             self.rect.center = pg.mouse.get_pos()
-        self.board.game.surface.blit(self.image, self.rect)
+        self.board.surface.blit(self.image, self.rect)
 
     def return_to_previous(self) -> None:
         self.rect.center = self.previous_center
@@ -207,6 +210,8 @@ class Piece:
                 depth += 1
         return valid_moves
 
+    def get_legal_moves(self):
+        return self.square
 
 
     def snap_to_square(self) -> None:
@@ -250,7 +255,7 @@ class Board:
     # inquire about the current state of the board
     def __init__(self, game, positions:BoardInput, is_white_turn:bool, 
         move_count:int):
-
+        self.surface = game.surface
         self.game = game
         self.piece_map = {}
         for piece_data in positions:
@@ -262,6 +267,8 @@ class Board:
                     self.piece_map[square] = Bishop(self, rect, glyph)
                 case 'r' | 'R':
                     self.piece_map[square] = Rook(self, rect, glyph)
+                case _:
+                    self.piece_map[square] = Piece(self, rect, glyph)
         self.is_white_turn = is_white_turn
         self.move_count = move_count
 
@@ -324,6 +331,26 @@ class Board:
         for piece in self.piece_map.values():
             if piece.click: return piece
 
+    def display_grid(self):
+        for x, y in square_coords:
+            row = x / 100
+            column = y / 100
+            rect = pg.Rect([x, y, 100, 100])
+            image = pg.Surface(rect.size).convert()
+            if not (is_odd(row) ^ is_odd(column)):
+                black_square(self.surface, image, rect)
+            else:
+                white_square(self.surface, image, rect)
+
+    def clear_surface(self):
+        self.surface.fill(0)
+
+    def update_board(self) -> None:
+        self.clear_surface()
+        self.display_grid()
+        for piece in self.get_players():
+            piece.update()
+
     def on_mouse_down(self):
         for piece in self.get_players():
             # The event positions is the mouse coordinates
@@ -382,14 +409,13 @@ class Board:
     def get_board_after_move(self, start_square:int, end_square:int) -> 'Board':
         '''
         1. determine the piece map after a move
-            a.
         2. convert from piece map back to the format we used to instantiate
             a board [(rect, glyph)]
         3. return said board
         '''
         new_piece_map = self.piece_map
         new_piece_map[start_square].move_to(end_square)
-        board_input = piece_map_to_board_input(new_piece_map)
+        board_input = piece_map_to_board_input(new_piece_map)   
         new_move_count = self.move_count + 1
         return Board(self.game, board_input, self.switch_is_white_turn(),
                      new_move_count)
@@ -400,38 +426,23 @@ class Game:
         fen_componants = starting_fen.split(' ')
         is_white_turn = fen_componants[FEN_ACTIVE_COLOUR] == 'w'
         move_count = int(fen_componants[FEN_MOVE_COUNT])
+        self.surface = pg.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
         self.boards = [Board(self, fen_to_pieces(starting_fen), is_white_turn, 
                              move_count)]
-        self.surface = pg.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
+        #self.boards = []
+        #self.add_board(Board(self, fen_to_board_input(starting_fen)))
         min_to_sec = lambda m : m * 60
         self.white_time = min_to_sec(5)
         self.black_time = min_to_sec(5)
         self.is_game_over = False
 
-    def display_grid(self):
-        for x, y in square_coords:
-            row = x / 100
-            column = y / 100
-            rect = pg.Rect([x, y, 100, 100])
-            image = pg.Surface(rect.size).convert()
-            if not (is_odd(row) ^ is_odd(column)):
-                black_square(self.surface, image, rect)
-            else:
-                white_square(self.surface, image, rect)
-
-    def clear_surface(self):
-        self.surface.fill(0)
-
     def update_board(self):
-        self.clear_surface()
-        self.display_grid()
+        self.get_current_board().update_board()
         for piece in self.get_current_board().get_players():
             if piece.click:
                 make_squares_blue(self.surface, [get_move_destination(move) for move in piece.get_legal_moves()])
 
-        for piece in self.get_current_board().get_players():
-            piece.update()
-
+        
     def get_current_board(self):
         return self.boards[-1]
 
