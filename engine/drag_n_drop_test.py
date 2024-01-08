@@ -211,7 +211,8 @@ class Piece:
         return valid_moves
 
     def get_legal_moves(self):
-        return self.square
+        print("ERROR: This piece has not been classified past being a piece")
+        return [self.square]
 
 
     def snap_to_square(self) -> None:
@@ -480,7 +481,7 @@ def get_random_fen() -> str:
 test_fen_strings = [
 '8/8/8/8/8/8/8/8 w - - 0 1',
 'kK6/8/8/8/8/8/8/8 w - - 0 1',
-'8/8/8/3bB3/3rR3/8/8/8 b - - 0 1',
+'k7/8/8/3bB3/3rR3/8/8/8 b - - 0 1',
 get_random_fen()
 ]
 
