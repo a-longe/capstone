@@ -212,7 +212,7 @@ class Piece:
 
     def get_legal_moves(self):
         print("ERROR: This piece has not been classified past being a piece")
-        return [self.square]
+        return [(self.square, self.square)]
 
 
     def snap_to_square(self) -> None:
@@ -332,23 +332,8 @@ class Board:
         for piece in self.piece_map.values():
             if piece.click: return piece
 
-    def display_grid(self):
-        for x, y in square_coords:
-            row = x / 100
-            column = y / 100
-            rect = pg.Rect([x, y, 100, 100])
-            image = pg.Surface(rect.size).convert()
-            if not (is_odd(row) ^ is_odd(column)):
-                black_square(self.surface, image, rect)
-            else:
-                white_square(self.surface, image, rect)
 
-    def clear_surface(self):
-        self.surface.fill(0)
-
-    def update_board(self) -> None:
-        self.clear_surface()
-        self.display_grid()
+    def update_pieces(self) -> None:
         for piece in self.get_players():
             piece.update()
 
@@ -437,11 +422,27 @@ class Game:
         self.black_time = min_to_sec(5)
         self.is_game_over = False
 
-    def update_board(self):
-        self.get_current_board().update_board()
+    def display_grid(self):
+        for x, y in square_coords:
+            row = x / 100
+            column = y / 100
+            rect = pg.Rect([x, y, 100, 100])
+            image = pg.Surface(rect.size).convert()
+            if not (is_odd(row) ^ is_odd(column)):
+                black_square(self.surface, image, rect)
+            else:
+                white_square(self.surface, image, rect)
+
+    def clear_surface(self):
+        self.surface.fill(0)
+
+    def update_game(self):
+        self.clear_surface()
+        self.display_grid()
         for piece in self.get_current_board().get_players():
             if piece.click:
                 make_squares_blue(self.surface, [get_move_destination(move) for move in piece.get_legal_moves()])
+        self.get_current_board().update_pieces()
 
         
     def get_current_board(self):
@@ -455,7 +456,7 @@ class Game:
 def main(game):
     # listen for events and update board in response to them
     game_event_loop(game)
-    game.update_board()
+    game.update_game()
 
 
 # Notice that the event loop has been given its own function. This makes
