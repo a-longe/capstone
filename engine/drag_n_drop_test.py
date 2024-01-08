@@ -227,6 +227,7 @@ class Bishop(Piece):
 
 
     def get_legal_moves(self) -> list[tuple[int, int]]:
+        print('b')
         OFFSETS = ((-1, -1) ,(-1, 1), (1, 1), (1, -1))
         valid_moves = []
         for offset in OFFSETS:
@@ -239,6 +240,7 @@ class Rook(Piece):
 
 
     def get_legal_moves(self) -> list[tuple[int, int]]:
+        print('r')
         OFFSETS = ((1, 0) ,(-1, 0), (0, 1), (0, -1))
         valid_moves = []
         for offset in OFFSETS:
