@@ -35,27 +35,34 @@ def my_divmod(num, divisor)->tuple[int, int]:
     num = abs(num)
     return is_neg*(num//divisor), is_neg*(num%divisor)
 
+
 def convert_piece(piece:'Piece') -> None:
     pass
+
 
 def add_tuples(t1:tuple, t2:tuple) -> tuple:
     """Precondition: tuples must both be len(2)"""
     return (t1[0] + t2[0], t1[1] + t2[1])
 
+
 def multiply_in_tuple(t1:tuple[int, int], multiplier:int) -> tuple[int, int]:
     return (t1[0] * multiplier, t1[1] * multiplier)
+
 
 def black_square(surface, image, rect):
     image.fill((187,190,100))
     surface.blit(image, rect)
 
+
 def white_square(surface, image, rect):
     image.fill((234,240,206))
     surface.blit(image, rect)
 
+
 def blue_square(surface, image, rect):
     image.fill((100, 100, 250))
     surface.blit(image, rect)
+
 
 def make_squares_blue(surface, squares:list[int]) -> None:
     for square in squares:
@@ -64,12 +71,15 @@ def make_squares_blue(surface, squares:list[int]) -> None:
         image = pg.Surface(rect.size).convert()
         blue_square(surface, image, rect)
 
+
 def get_snap_cords(x, y) -> Cord:
     return (math.floor(x / SQUARE_SIZE) * SQUARE_SIZE,
             math.floor(y / SQUARE_SIZE) * SQUARE_SIZE)
 
+
 def is_possible_square_r_c(square:tuple[int, int]) -> bool:
     return (0 <= square[0] <= 7) and (0 <= square[1] <= 7)
+
 
 def r_c_to_int(square:tuple[int, int]) -> int:
     return square[0]*8 + square[1]
@@ -227,7 +237,6 @@ class Bishop(Piece):
 
 
     def get_legal_moves(self) -> list[tuple[int, int]]:
-        print('b')
         OFFSETS = ((-1, -1) ,(-1, 1), (1, 1), (1, -1))
         valid_moves = []
         for offset in OFFSETS:
@@ -240,7 +249,6 @@ class Rook(Piece):
 
 
     def get_legal_moves(self) -> list[tuple[int, int]]:
-        print('r')
         OFFSETS = ((1, 0) ,(-1, 0), (0, 1), (0, -1))
         valid_moves = []
         for offset in OFFSETS:
@@ -344,11 +352,9 @@ class Board:
             # The event positions is the mouse coordinates
             if piece.rect.collidepoint(pg.mouse.get_pos()) and \
                piece.can_pickup():
-                if not piece.click:
-                    # store current center
-                    piece.previous_center = piece.rect.center
+                # store current center
+                piece.previous_center = piece.rect.center
                 piece.click = True
-                squares = list(map(lambda t : t[1], self.game.get_current_board().piece_map[piece.get_square_index()].get_legal_moves()))
 
 
     def on_mouse_up(self) -> None: 
@@ -369,17 +375,19 @@ class Board:
                         # if colliding with piece with different colour
                         # delete piece from piece_list and then snap
                         pieces_to_be_deleted.append(piece_to_take)                      
-                        piece.snap_to_square()
                         pieces_to_be_moved.append(piece)
                     else:
                         piece.return_to_previous()
                 else:
                     # if not colliding with any piece
-                    piece.snap_to_square()
                     pieces_to_be_moved.append(piece)
+
             # else set cords to last square
             else:
                 piece.return_to_previous()
+
+                
+            piece.snap_to_square()
             piece.click = False
 
 
