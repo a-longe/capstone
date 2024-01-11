@@ -295,6 +295,8 @@ class Board:
         2. convert from piece map back to the format we used to instantiate
             a board [(rect, glyph)]
         3. return said board
+
+        TODO: check for updating castling rights
         '''
         new_piece_map = self.piece_map
         new_piece_map[start_square].move_to(end_square)
@@ -346,9 +348,11 @@ class Board:
 
         fen += ' w ' if self.is_white_turn else ' b '
 
+        has_any_castle_right = len([active_cr for active_cr in self.casting_rights.values() if active_cr])>0
         for castle_right in self.casting_rights.keys():
             if self.casting_rights[castle_right]:
                 fen += castle_right
+        if not has_any_castle_right: fen += '-'
         fen+=' '
 
         fen += '- ' if self.en_passent_target == -1 else str(self.en_passent_target) + ' '
@@ -463,7 +467,6 @@ def get_random_fen() -> str:
     with open(RAND_FENS_PATH) as fen_file:
         fens = fen_file.readlines()
     fen = fens[randint(0, len(fens) - 1)]
-    print(fen)
     return fen
 
 test_fen_strings = [
@@ -486,9 +489,16 @@ display, not to be confused with updating the board or pieces.
 if __name__ == "__main__":
     os.environ['SDL_VIDEO_CENTERED'] = '1'
     pg.init()
-    game = Game(STARTING_FEN)
+    fen = test_fen_strings[3]
+    print(fen)
+    game = Game(fen)
     MyClock = pg.time.Clock()
     while not game.is_game_over:
         main(game)
         pg.display.update()
         MyClock.tick(60)
+
+
+"""
+TODO: ISSUE WITH CASTLING RIGHTS
+"""
