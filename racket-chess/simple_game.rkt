@@ -5,7 +5,8 @@
 (define frame (new frame% [label "Window Title"]))
 
 (define msg (new message% [parent frame]
-						  [label "message body..."]))
+						  [label "message body..."]
+						  [callback (send msg set-label "test")]))
 
 (new button% [parent frame]
 			 [label "button before click"]

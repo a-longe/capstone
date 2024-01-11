@@ -6,6 +6,8 @@ from random import randint
 from copy import deepcopy
 from pprint import pprint
 
+Move = tuple[int, int]
+
 Cord = tuple[int, int]
 BoardInput = list[tuple[tuple[int, int, int, int], str]]
 FEN_ACTIVE_COLOUR = 1
@@ -203,23 +205,6 @@ class Piece:
 
         self.square = self.get_square_index()
 
-    def get_sliding_moves(self, offset:tuple[int, int]) -> list[int, int]:
-        start_square = self.square
-        depth = 1
-        valid_moves = []
-        while not will_move_out(start_square, multiply_in_tuple(offset, depth)):
-            new_square = get_square_after_move(start_square, multiply_in_tuple(offset, depth))
-            if new_square in self.board.piece_map.keys():
-                if not self.board.piece_map[new_square].is_same_colour(self):
-                    # if the piece is not the same colour as this one
-                    valid_moves.append((start_square, new_square))
-                break   
-            else:
-                # empty square
-                valid_moves.append((start_square, new_square))
-                depth += 1
-        return valid_moves
-
     def get_legal_moves(self):
         print("ERROR: This piece has not been classified past being a piece")
         return [(self.square, self.square)]
@@ -230,31 +215,29 @@ class Piece:
             player_cords = (self.rect.center[0], self.rect.center[1])
             self.rect.topleft = get_snap_cords(*player_cords)
 
-
 class Bishop(Piece):
-    def __init__(self, board, rect, glyph):
+    def __init__(self, board, rect, glyph) -> None:
         Piece.__init__(self, board, rect, glyph)
 
 
-    def get_legal_moves(self) -> list[tuple[int, int]]:
+    def get_legal_moves(self) -> list[Move]:
         OFFSETS = ((-1, -1) ,(-1, 1), (1, 1), (1, -1))
         valid_moves = []
         for offset in OFFSETS:
-            valid_moves += self.get_sliding_moves(offset)
+            valid_moves += self.board.get_sliding_moves(self.square, offset)
         return valid_moves
 
 class Rook(Piece):
-    def __init__(self, board, rect, glyph):
+    def __init__(self, board, rect, glyph) -> None :
         Piece.__init__(self, board, rect, glyph)
 
 
-    def get_legal_moves(self) -> list[tuple[int, int]]:
+    def get_legal_moves(self) -> list[Move]:
         OFFSETS = ((1, 0) ,(-1, 0), (0, 1), (0, -1))
         valid_moves = []
         for offset in OFFSETS:
-            valid_moves += self.get_sliding_moves(offset)
+            valid_moves += self.board.get_sliding_moves(self.square, offset)
         return valid_moves
-
 
 class Board:
     # Each position corresponds to the arguments needed to instantiate
@@ -335,7 +318,7 @@ class Board:
         return (y * 8) + x
 
     def del_piece(self, piece:Piece):
-        map_key = self.get_square_index(*piece.rect[:2])
+        map_key = self.board.get_square_index(*piece.rect[:2])
         del self.piece_map[map_key]
 
     def get_clicked_piece(self) -> Piece:
@@ -386,7 +369,7 @@ class Board:
             else:
                 piece.return_to_previous()
 
-                
+
             piece.snap_to_square()
             piece.click = False
 
