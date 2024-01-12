@@ -396,7 +396,8 @@ class Board:
 
     def eval_move(self, piece, new_square) -> int:
         # if valid location and is legal move()
-        is_valid = self.game.mouse_inside_bounds() and True
+        is_valid = self.game.mouse_inside_bounds() and \
+                   new_square in [move[1] for move in piece.get_legal_moves()]
 
         if is_valid:
             # does piece collide with another piece
@@ -591,7 +592,6 @@ class Game:
 
         if piece.square not in piece.board.legal_moves_map:
             legal_squares = [move[1] for move in piece.get_legal_moves()]
-            print("get_legal_moves")
             piece.board.legal_moves_map[piece.square] = legal_squares
         else:
             legal_squares = piece.board.legal_moves_map[piece.square]
