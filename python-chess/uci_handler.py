@@ -6,7 +6,7 @@ from chessboard import constants
 STOCKFISH_RUN_COMMAND = \
 "~/Documents/stockfish/stockfish/./stockfish-ubuntu-x86-64-avx2"
 
-BESTMOVE_LINE_INDEX:tuple = (9, 14)
+BESTMOVE_LINE_INDEX:tuple = (9, 13)
 FEN_LINE_INDEX = 5
 MS_TO_SEC_CONVERSION = 0.001
 
