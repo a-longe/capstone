@@ -585,17 +585,22 @@ class Game:
     def clear_surface(self) -> None:
         self.surface.fill(0)
 
+    def display_blue_squares(self) -> None:
+        piece = self.get_current_board().get_clicked_piece()
+        if piece == -1: return
+
+        if piece.square not in piece.board.legal_moves_map:
+            legal_squares = [move[1] for move in piece.get_legal_moves()]
+            print("get_legal_moves")
+            piece.board.legal_moves_map[piece.square] = legal_squares
+        else:
+            legal_squares = piece.board.legal_moves_map[piece.square]
+        make_squares_blue(self.surface, legal_squares)
+
     def update_game(self) -> None:
         self.clear_surface()
         self.display_grid()
-        for piece in game.get_current_board().get_pieces():
-            if piece.click: 
-                if piece.square not in piece.board.legal_moves_map:
-                    legal_squares = [move[1] for move in piece.get_legal_moves()]
-                    piece.board.legal_moves_map[piece.square] = legal_squares
-                else:
-                    legal_squares = piece.board.legal_moves_map[piece.square]
-                make_squares_blue(self.surface, legal_squares)
+        if self.display_blue: self.display_blue_squares()
         self.get_current_board().update_pieces()
  
 
