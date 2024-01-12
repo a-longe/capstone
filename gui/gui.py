@@ -152,8 +152,10 @@ def on_mouse_up(game) -> None:
         case MoveEvalResponces.MOVE_TO_EMPTY:
             pieces_to_be_moved.append(piece)
         case MoveEvalResponces.CAPTURE_MOVE:
+            piece_to_be_captured = game.get_current_board().piece_map[mouse_square]
+            if piece_to_be_captured.glyph.lower() == 'k': game.is_game_over = True
             pieces_to_be_moved.append(piece)
-            pieces_to_be_deleted.append(game.get_current_board().piece_map[mouse_square])
+            pieces_to_be_deleted.append(piece_to_be_captured)
 
     piece.snap_to_square()
     piece.click = False
@@ -346,8 +348,8 @@ class Pawn(Piece):
             if will_move_out(self.square, take_offset): continue
             new_sqr = get_square_after_move(self.square, take_offset)
             if (new_sqr in self.board.piece_map.keys() and
-                not self.board.piece_map[new_sqr].is_same_colour(self)):
-                # add en_passent here?
+                not self.board.piece_map[new_sqr].is_same_colour(self)) or \
+                new_sqr == self.board.en_passent_target:
                 # is different colour or en passent taget is there
                 valid_moves.append((self.square, new_sqr))
 
@@ -433,6 +435,11 @@ class Board:
         new_piece_map[start_square].move_to(end_square)
         board_input = self.piece_map_to_board_input(new_piece_map)   
         new_move_count = self.move_count + 1 if self.is_white_turn else self.move_count
+        if (self.en_passent_target < 32 and self.is_white_turn) or \
+           (self.en_passent_target >= 32 and not self.is_white_turn):
+            self.en_passent_target = -1
+
+
         return Board(self.game, board_input, self.switch_is_white_turn(),
                      new_move_count, self.halfmove_count+1, 
                      self.casting_rights, self.en_passent_target)
