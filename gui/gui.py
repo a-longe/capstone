@@ -255,7 +255,6 @@ class Piece:
         # set self.square to new location
         old_square = self.square
         if new_square == old_square: return
-        print(f"move(): from: {old_square} to {new_square}")
 
         self.board.piece_map[new_square] = self
         del self.board.piece_map[old_square]
@@ -350,7 +349,6 @@ class Pawn(Piece):
                 not self.board.piece_map[new_sqr].is_same_colour(self)):
                 # add en_passent here?
                 # is different colour or en passent taget is there
-                print(f"take {new_sqr}")
                 valid_moves.append((self.square, new_sqr))
 
         for move_offset in move_offsets:
@@ -359,7 +357,6 @@ class Pawn(Piece):
             if new_sqr not in self.board.piece_map.keys():
                 # no piece at new square
                 valid_moves.append((self.square, new_sqr))
-                print(f"move {new_sqr}")
         return valid_moves
 
 
@@ -598,7 +595,6 @@ class Game:
                     piece.board.legal_moves_map[piece.square] = legal_squares
                 else:
                     legal_squares = piece.board.legal_moves_map[piece.square]
-                print(legal_squares)
                 make_squares_blue(self.surface, legal_squares)
         self.get_current_board().update_pieces()
  
