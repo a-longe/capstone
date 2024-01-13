@@ -255,6 +255,8 @@ class Piece:
         # with new index as key, set value to self
         # then take original location in map and delete
         # set self.square to new location
+
+        # TO DO implement castling and en passent here (functionized)
         old_square = self.square
         if new_square == old_square: return
 
