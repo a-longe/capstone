@@ -509,7 +509,6 @@ class Board:
         new_piece_map[start_square].move_to(end_square)
         board_input = self.piece_map_to_board_input(new_piece_map)   
         new_move_count = self.move_count + 1 if self.is_white_turn else self.move_count
-        
         if (self.en_passent_target < 32 and self.is_white_turn) or \
            ((-1 < self.en_passent_target >= 32) and not self.is_white_turn):
             self.en_passent_target = -1
