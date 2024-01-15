@@ -253,15 +253,41 @@ class Piece:
 
     def move_to(self, new_square:int) -> None:
         # with new index as key, set value to self
-        # then take original location in map and delete
+        # then take original l  ocation in map and delete
         # set self.square to new location
+        old_square = self.square
+        move = (old_square, new_square)
+        index_to_del = old_square
+
+        pprint(self.board.piece_map)
+        print(move)
 
         # TO DO implement castling and en passent here (functionized)
-        old_square = self.square
-        if new_square == old_square: return
+        if self.board.is_move_en_passent(move):
+            print('Move is en passent')
+            # delete piece above or below piece, not square moving to
+            dir = -1 if self.is_white else 1
+            index_to_del += dir * 8
+
+        if self.board.is_move_castling(move):
+            print("Move is castling")
+            # move rook as well
+            move_diff = abs(old_square - new_square)
+            if move_diff == 2:
+                # short castle
+                rook_i = new_square + 1
+                new_rook_i = new_square - 1
+
+            elif move_diff == 3:
+                # long castle
+                rook_i = new_square - 2
+                new_rook_i = new_square + 1
+
+            self.board.piece_map[rook_i].move_to(new_rook_i)
+
 
         self.board.piece_map[new_square] = self
-        del self.board.piece_map[old_square]
+        del self.board.piece_map[index_to_del]
 
         self.square = self.get_square_index()
 
@@ -424,6 +450,32 @@ class Board:
         pieces = piece_map.values()
         return [(*piece.rect[:3], piece.glyph) for piece in pieces]
 
+    def is_move_double_push(self, move:Move):
+        if self.piece_map[move[0]].glyph.lower() == 'p':
+            if abs(move[0] - move[1]) == 16:
+                print("double push")
+                return True
+        return False
+
+    def is_move_en_passent(self, move:Move):
+        piece = self.piece_map[move[0]]
+        if piece.glyph.lower() == 'p':
+            if (piece.is_white and piece.square < 32) or \
+                (not piece.is_white and piece.square >= 32):
+                    print(move[1], self.en_passent_target)
+                    if move[1] == self.en_passent_target:
+                        print("en passent")
+                        return True
+        return False
+
+    def is_move_castling(self, move:Move):
+        if self.piece_map[move[0]].glyph.lower() == 'k':
+            if abs(move[0] - move[1]) == 2:
+                print("castling")
+                return True
+        return False
+
+
     def get_board_after_move(self, start_square:int, end_square:int) -> 'Board':
         '''
         1. determine the piece map after a move
@@ -433,14 +485,34 @@ class Board:
 
         TODO: check for updating castling rights
         '''
+        move = (start_square, end_square)
+
+        if self.is_move_double_push(move):
+            # update en_passent_target
+            self.en_passent_target = (start_square + end_square) // 2
+
+        elif self.is_move_en_passent(move):
+            # clear en_passent_target
+            self.en_passent_target = -1
+
+        elif self.is_move_castling(move):
+            # remove one colours castling rights
+            castling_rights_to_change = ['k', 'q']
+            if new_piece_map[end_square].is_white:
+                map(lambda u:u.upper(), castling_rights_to_change)
+
+            for cr_to_chg in castling_rights_to_change:
+                self.casting_rights[cr_to_chg] = False
+
+
         new_piece_map = self.piece_map
         new_piece_map[start_square].move_to(end_square)
         board_input = self.piece_map_to_board_input(new_piece_map)   
         new_move_count = self.move_count + 1 if self.is_white_turn else self.move_count
+        
         if (self.en_passent_target < 32 and self.is_white_turn) or \
-           (self.en_passent_target >= 32 and not self.is_white_turn):
+           ((-1 < self.en_passent_target >= 32) and not self.is_white_turn):
             self.en_passent_target = -1
-
 
         return Board(self.game, board_input, self.switch_is_white_turn(),
                      new_move_count, self.halfmove_count+1, 
@@ -645,7 +717,8 @@ STARTING_FEN,
 '8/8/8/8/8/8/8/8 w - - 0 1',
 '8/6p1/5P2/4p3/3P4/2p5/1P6/8 w - - 0 1',
 'k7/8/8/3bQ3/3nR3/8/8/8 b KQkq - 0 1',
-get_random_fen()
+get_random_fen(),
+'8/3pp3/8/8/8/8/3PP3/8 w - - 0 1'
 ]
 
 """
@@ -665,7 +738,8 @@ fen_prompt = """
     1 is an empty board,
     2 will help test pawn movement,
     3 will test most other pieces,
-    4 is a random fen string
+    4 is a random fen string,
+    5 is a en passent test
 """
 
 if __name__ == "__main__":
