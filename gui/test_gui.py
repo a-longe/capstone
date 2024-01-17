@@ -1,7 +1,7 @@
 import pytest
 import gui
 import time, datetime
-	
+
 random_fens = open("../engine/random_fens.txt", 'r')
 game = gui.Game(gui.STARTING_FEN)
 
@@ -28,4 +28,3 @@ def test_get_legal_move_speed():
 
 
 random_fens.close()
-

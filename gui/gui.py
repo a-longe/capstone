@@ -26,16 +26,6 @@ Cord = tuple[int, int]
 CORD_X = 0
 CORD_Y = 1
 
-TOP_LEFT = 100
-BOTTOM_RIGHT = 900
-SQUARE_SIZE = 100
-SCREEN_WIDTH = 1000
-SCREEN_HEIGHT = 1000
-
-SQUARE_COORDS = [[i, j] for i in range(TOP_LEFT, BOTTOM_RIGHT, SQUARE_SIZE) \
-                for j in range(TOP_LEFT, BOTTOM_RIGHT, SQUARE_SIZE)]
-
-
 IMAGE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'images')
 
 INT_TO_LETTER = {
@@ -54,7 +44,7 @@ class MoveEvalResponces:
     MOVE_TO_EMPTY = 1
     CAPTURE_MOVE = 2
 
-def add_tuples(t1:tuple, t2:tuple) -> tuple:
+def add_tuples(t1:tuple, t2:tuple) -> tuple[int, int]:
     """Precondition: tuples must both be len(2)"""
     return (t1[0] + t2[0], t1[1] + t2[1])
 
@@ -83,16 +73,16 @@ def blue_square(surface, image, rect):
     image.fill((100, 100, 250))
     surface.blit(image, rect)
 
-def make_squares_blue(surface, squares:list[int]) -> None:
+def make_squares_blue(surface, square_size, squares:list[int]) -> None:
     for square in squares:
-        x, y = my_divmod(square, 8)[1] * SQUARE_SIZE + 100, my_divmod(square, 8)[0] * SQUARE_SIZE + 100
+        x, y = my_divmod(square, 8)[1] * square_size + 100, my_divmod(square, 8)[0] * square_size + 100
         rect = pg.Rect([x, y, 100, 100])
         image = pg.Surface(rect.size).convert()
         blue_square(surface, image, rect)
 
 def square_index_to_algebraic(square_index:int) -> str:
     row, column = divmod(square_index, 8)
-    return INT_TO_LETTER[column] + str(column )
+    return INT_TO_LETTER[column] + str(column)
 
 def multiply_in_tuple(t1:tuple[int, int], multiplier:int) -> tuple[int, int]:
     return (t1[0] * multiplier, t1[1] * multiplier)
@@ -115,9 +105,9 @@ def get_square_after_move(start:int, offset_r_c:tuple[int, int]) -> int:
     new_square_r_c = add_tuples(start_r_c, offset_r_c)
     return r_c_to_int(new_square_r_c)
 
-def get_snap_cords(x, y) -> Cord:
-    return (math.floor(x / SQUARE_SIZE) * SQUARE_SIZE,
-            math.floor(y / SQUARE_SIZE) * SQUARE_SIZE)
+def get_snap_cords(x, y, square_size) -> Cord:
+    return (math.floor(x / square_size) * square_size,
+            math.floor(y / square_size) * square_size)
 
 def get_piece_img(glyph:str) -> pg.Surface:
     if glyph.isupper():
@@ -143,36 +133,42 @@ def on_mouse_up(game) -> None:
 
     piece = game.get_current_board().get_clicked_piece()
     if piece == -1: return # would like to make this nicer but will get back to it later
+    start_square = piece.square
 
-    mouse_square = game.get_square_index(*pg.mouse.get_pos())
+    end_square = mouse_square = game.get_square_index(*pg.mouse.get_pos())
 
     match game.get_current_board().eval_move(piece, mouse_square):
         case MoveEvalResponces.INVALID_MOVE:
             piece.return_to_previous()
         case MoveEvalResponces.MOVE_TO_EMPTY:
             pieces_to_be_moved.append(piece)
+            # new_board = new_move_to_empty_board(start_square, end_square)
         case MoveEvalResponces.CAPTURE_MOVE:
             piece_to_be_captured = game.get_current_board().piece_map[mouse_square]
             if type(piece_to_be_captured) == King: game.is_game_over = True
             pieces_to_be_moved.append(piece)
             pieces_to_be_deleted.append(piece_to_be_captured)
-
+        # add castling and en passent here (kingside / queenside)
+        case MoveEvalResponces.KING_CASTLE:
+            # new_board = board.new_king_castle_board()
+            pass
     piece.snap_to_square()
     piece.click = False
-
+    # game.add_board(new_board)
 
     for piece_to_del in pieces_to_be_deleted:
         game.get_current_board().del_piece(piece_to_del)
     for piece_to_be_moved in pieces_to_be_moved:
         new_square = piece_to_be_moved.get_square_index()
         old_square = piece_to_be_moved.square
+
         game.add_board(game.get_current_board().get_board_after_move(old_square,
                                                                     new_square))
         print(f"move #{len(game.boards) // 2}")
         print(game.get_current_board().get_fen())
     #pprint(self.piece_map)
 
-def fen_to_pieces(fen) -> PiecePositionInput:
+def fen_to_pieces(fen, game) -> PiecePositionInput:
     lo_pieces = []
     pieces = fen.split(' ')[0]
     rows = pieces.split('/')
@@ -184,20 +180,20 @@ def fen_to_pieces(fen) -> PiecePositionInput:
                 c_i += int(char) - 1
             else:
                 # convert c_i and r_i into square
-                lo_pieces.append((c_i * SQUARE_SIZE + SQUARE_SIZE,
-                                  r_i * SQUARE_SIZE + SQUARE_SIZE,
-                                  SQUARE_SIZE,
+                lo_pieces.append((c_i * game.square_size + game.square_size,
+                                  r_i * game.square_size + game.square_size,
+                                  game.square_size,
                                   char))
             c_i += 1
         r_i += 1
     return lo_pieces
 
 
-def fen_to_board_input(fen) -> BoardFenInput:
+def fen_to_board_input(fen, game) -> BoardFenInput:
     piece_str, active_colour_str, castling_rights_str, en_passent_str, \
     move_count_str, halfmove_count_str = fen.split(' ')
 
-    board_piece_input = fen_to_pieces(fen)
+    board_piece_input = fen_to_pieces(fen, game)
     is_white = True if active_colour_str == 'w' else False
     castling_rights = {
         'K': False,
@@ -223,8 +219,8 @@ class Piece:
         self.square = board.game.get_square_index(*rect[:2])
         self.previous_center = self.rect.center
         self.click = False
-        self.image = pg.transform.scale(get_piece_img(glyph), (SQUARE_SIZE,
-                                                               SQUARE_SIZE))
+        self.image = pg.transform.scale(get_piece_img(glyph), (board.game.square_size,
+                                                               board.game.square_size))
         self.is_white = glyph.isupper()
 
     def update(self) -> None:
@@ -247,8 +243,8 @@ class Piece:
 
     def get_square_index(self) -> int:
         x, y = self.board.game.relative_board_cords(*self.rect[:2])
-        x //= SQUARE_SIZE
-        y //= SQUARE_SIZE
+        x //= self.board.game.square_size
+        y //= self.board.game.square_size
         return (y * 8) + x
 
     def move_to(self, new_square:int) -> None:
@@ -283,7 +279,7 @@ class Piece:
                 new_rook_i = new_square + 1
 
             print("rook", rook_i, new_rook_i)
-            self.board.piece_map[rook_i].rect.topleft = self.board.game.get_cords_from_index(new_rook_i)
+            #self.board.piece_map[rook_i].rect.topleft = self.board.game.get_cords_from_index(new_rook_i)
             self.board.piece_map[rook_i].move_to(new_rook_i)
 
         pprint(self.board.piece_map)
@@ -302,7 +298,7 @@ class Piece:
     def snap_to_square(self) -> None:
         if self.board.game.mouse_inside_bounds():
             player_cords = (self.rect.center[0], self.rect.center[1])
-            self.rect.topleft = get_snap_cords(*player_cords)
+            self.rect.topleft = get_snap_cords(*player_cords, self.board.game.square_size)
 
 
 class Bishop(Piece):
@@ -524,8 +520,6 @@ class Board:
         2. convert from piece map back to the format we used to instantiate
             a board [(rect, glyph)]
         3. return said board
-
-        TODO: check for updating castling rights
         '''
         reset_en_passent = False
         move = (start_square, end_square)
@@ -650,8 +644,19 @@ class Board:
 
 class Game:
     def __init__(self, starting_fen=STARTING_FEN) -> None:
+
+        self.square_size = 100
+        self.top_left = 100
+        self.bottom_right = self.top_left + (8 * self.square_size)
+        SCREEN_WIDTH = 1000
+        SCREEN_HEIGHT = 1000
+
+        square_cords_gen  = range(self.top_left, self.bottom_right, self.square_size)
+        self.square_cords = [[i, j] \
+            for i in square_cords_gen \
+            for j in square_cords_gen]
         self.surface = pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-        self.boards = [Board(self, *fen_to_board_input(starting_fen))]
+        self.boards = [Board(self, *fen_to_board_input(starting_fen, self))]
         min_to_sec = lambda m : m * 60
         self.white_time = min_to_sec(5)
         self.black_time = min_to_sec(5)
@@ -669,28 +674,28 @@ class Game:
         self.display_blue = ~self.display_blue
 
     def is_inside_bounds(self, x, y) -> bool:
-        return (x >= TOP_LEFT and x <= BOTTOM_RIGHT and
-                y >= TOP_LEFT and y <= BOTTOM_RIGHT)
+        return (x >= self.top_left and x <= self.bottom_right and
+                y >= self.top_left and y <= self.bottom_right)
 
     def mouse_inside_bounds(self) -> bool:
         return self.is_inside_bounds(*pg.mouse.get_pos())
 
     def relative_board_cords(self, x, y) -> Cord:
-        return (x-TOP_LEFT, y-TOP_LEFT)
+        return (x-self.top_left, y-self.top_left)
 
     def get_square_index(self, x, y) -> int:
         """
         Precondition: x, y point must be inside board already
         """
         x, y = self.relative_board_cords(x, y)
-        x //= SQUARE_SIZE
-        y //= SQUARE_SIZE
+        x //= self.square_size
+        y //= self.square_size
         return (y * 8) + x
 
     def get_cords_from_index(self, index:int) -> Cord:
         y, x  = divmod(index, 8)
-        x *= SQUARE_SIZE
-        y *= SQUARE_SIZE
+        x *= self.square_size
+        y *= self.square_size
         return x + 100, y + 100
 
     def get_current_board(self) -> Board:
@@ -700,7 +705,7 @@ class Game:
         self.boards.append(board)
 
     def display_grid(self) -> None:
-        for x, y in SQUARE_COORDS:
+        for x, y in self.square_cords:
             row = x / 100
             column = y / 100
             rect = pg.Rect([x, y, 100, 100])
@@ -722,7 +727,7 @@ class Game:
             piece.board.legal_moves_map[piece.square] = legal_squares
         else:
             legal_squares = piece.board.legal_moves_map[piece.square]
-        make_squares_blue(self.surface, legal_squares)
+        make_squares_blue(self.surface, self.square_size, legal_squares)
 
     def update_game(self) -> None:
         self.clear_surface()
