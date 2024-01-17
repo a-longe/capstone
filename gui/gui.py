@@ -43,7 +43,7 @@ INT_TO_LETTER = {
     1: 'b',
     2: 'c',
     3: 'd',
-    4: 'e',    
+    4: 'e',
     5: 'f',
     6: 'g',
     7: 'h',
@@ -136,8 +136,8 @@ def on_mouse_down(game):
             # store current center
             piece.previous_center = piece.rect.center
             piece.click = True
-            
-def on_mouse_up(game) -> None: 
+
+def on_mouse_up(game) -> None:
     pieces_to_be_deleted = []
     pieces_to_be_moved = []
 
@@ -153,7 +153,7 @@ def on_mouse_up(game) -> None:
             pieces_to_be_moved.append(piece)
         case MoveEvalResponces.CAPTURE_MOVE:
             piece_to_be_captured = game.get_current_board().piece_map[mouse_square]
-            if piece_to_be_captured.glyph.lower() == 'k': game.is_game_over = True
+            if type(piece_to_be_captured) == King: game.is_game_over = True
             pieces_to_be_moved.append(piece)
             pieces_to_be_deleted.append(piece_to_be_captured)
 
@@ -186,7 +186,7 @@ def fen_to_pieces(fen) -> PiecePositionInput:
                 # convert c_i and r_i into square
                 lo_pieces.append((c_i * SQUARE_SIZE + SQUARE_SIZE,
                                   r_i * SQUARE_SIZE + SQUARE_SIZE,
-                                  SQUARE_SIZE, 
+                                  SQUARE_SIZE,
                                   char))
             c_i += 1
         r_i += 1
@@ -194,25 +194,25 @@ def fen_to_pieces(fen) -> PiecePositionInput:
 
 
 def fen_to_board_input(fen) -> BoardFenInput:
-    piece_str, active_colour_str, casting_rights_str, en_passent_str, \
+    piece_str, active_colour_str, castling_rights_str, en_passent_str, \
     move_count_str, halfmove_count_str = fen.split(' ')
 
     board_piece_input = fen_to_pieces(fen)
     is_white = True if active_colour_str == 'w' else False
-    casting_rights = {
+    castling_rights = {
         'K': False,
         'Q': False,
         'k': False,
         'q': False
     }
-    for castle_right in casting_rights_str:
-        if castle_right in casting_rights.keys():
-            casting_rights[castle_right] = True
+    for castle_right in castling_rights_str:
+        if castle_right in castling_rights.keys():
+            castling_rights[castle_right] = True
     en_passent_target = int(en_passent_str) if en_passent_str != '-' else -1
     move_count = int(move_count_str)
     halfmove_count = int(halfmove_count_str)
     return board_piece_input, is_white, move_count, halfmove_count, \
-           casting_rights, en_passent_target
+           castling_rights, en_passent_target
 
 
 class Piece:
@@ -223,7 +223,7 @@ class Piece:
         self.square = board.game.get_square_index(*rect[:2])
         self.previous_center = self.rect.center
         self.click = False
-        self.image = pg.transform.scale(get_piece_img(glyph), (SQUARE_SIZE, 
+        self.image = pg.transform.scale(get_piece_img(glyph), (SQUARE_SIZE,
                                                                SQUARE_SIZE))
         self.is_white = glyph.isupper()
 
@@ -242,7 +242,7 @@ class Piece:
         """
         Would not be able to be picked up if piece cant help with a check, or if
         its not the active colour
-        """ 
+        """
         return self.is_white == self.board.is_white_turn
 
     def get_square_index(self) -> int:
@@ -253,37 +253,40 @@ class Piece:
 
     def move_to(self, new_square:int) -> None:
         # with new index as key, set value to self
-        # then take original l  ocation in map and delete
+        # then take original location in map and delete
         # set self.square to new location
         old_square = self.square
         move = (old_square, new_square)
         index_to_del = old_square
 
-        pprint(self.board.piece_map)
         print(move)
 
         # TO DO implement castling and en passent here (functionized)
         if self.board.is_move_en_passent(move):
             print('Move is en passent')
             # delete piece above or below piece, not square moving to
-            dir = -1 if self.is_white else 1
-            index_to_del += dir * 8
+            dir = 1 if self.is_white else -1
+            index_to_del = new_square + (dir*8)
 
-        if self.board.is_move_castling(move):
+        elif self.board.is_move_castling(move):
             print("Move is castling")
             # move rook as well
-            move_diff = abs(old_square - new_square)
-            if move_diff == 2:
+            move_diff = old_square - new_square
+            if move_diff == -2:
                 # short castle
                 rook_i = new_square + 1
                 new_rook_i = new_square - 1
 
-            elif move_diff == 3:
+            elif move_diff == 2:
                 # long castle
                 rook_i = new_square - 2
                 new_rook_i = new_square + 1
 
+            print("rook", rook_i, new_rook_i)
+            self.board.piece_map[rook_i].rect.topleft = self.board.game.get_cords_from_index(new_rook_i)
             self.board.piece_map[rook_i].move_to(new_rook_i)
+
+        pprint(self.board.piece_map)
 
 
         self.board.piece_map[new_square] = self
@@ -352,9 +355,33 @@ class King(Piece):
         Piece.__init__(self, board, rect, glyph)
 
     def get_legal_moves(self) -> list[Move]:
+        valid_moves = []
         OFFSETS = ((-1, -1), (-1, 0), (-1, 1), (0, -1), \
                     (0, 1), (1, -1), (1, 0), (1, 1))
-        return self.board.get_jumping_moves(self.square, OFFSETS)
+        CASTLING_KINGSIDE_OFFSET = [(0, 2)]
+        CASTLING_QUEENSIDE_OFFSET = [(0, -2)]
+        valid_moves = self.board.get_jumping_moves(self.square, OFFSETS)
+
+        castling_kingside_moves = self.board.get_jumping_moves(self.square, CASTLING_KINGSIDE_OFFSET)
+        castling_queenside_moves = self.board.get_jumping_moves(self.square, CASTLING_QUEENSIDE_OFFSET)
+
+        if self.square + 1 in self.board.piece_map or \
+            self.square + 2 in self.board.piece_map:
+            castling_kingside_moves = []
+        elif self.square - 1 in self.board.piece_map or \
+            self.square - 2 in self.board.piece_map or \
+            self.square - 3 in self.board.piece_map:
+            castling_queenside_moves = []
+
+        c_r_to_check = ['K', 'Q'] if self.board.is_white_turn else ['k', 'q']
+        for castling_right in c_r_to_check:
+            if castling_right.lower() == 'k' and self.board.castling_rights[castling_right]:
+                valid_moves += castling_kingside_moves
+            elif castling_right.lower() == 'q' and self.board.castling_rights[castling_right]:
+                valid_moves += castling_queenside_moves
+
+        print(valid_moves)
+        return valid_moves
 
 class Pawn(Piece):
     def __init__(self, board, rect, glyph) -> None:
@@ -393,7 +420,7 @@ class Pawn(Piece):
 class Board:
     def __init__(self, game, piece_positions:list[PiecePositionInput],
                 is_white_turn:bool, move_count:int, halfmove_count:int,
-                casting_rights:dict[str:bool], en_passent_target:int) -> None:
+                castling_rights:dict[str:bool], en_passent_target:int) -> None:
         self.surface = game.surface # passed by reference
         self.game = game
         self.piece_map = {}
@@ -420,7 +447,7 @@ class Board:
         self.is_white_turn = is_white_turn
         self.move_count = move_count
         self.halfmove_count = halfmove_count
-        self.casting_rights = casting_rights
+        self.castling_rights = castling_rights
         self.en_passent_target = en_passent_target
         self.legal_moves_map = {}
 
@@ -451,7 +478,7 @@ class Board:
         return [(*piece.rect[:3], piece.glyph) for piece in pieces]
 
     def is_move_double_push(self, move:Move):
-        if self.piece_map[move[0]].glyph.lower() == 'p':
+        if type(self.piece_map[move[0]]) == Pawn:
             if abs(move[0] - move[1]) == 16:
                 print("double push")
                 return True
@@ -459,7 +486,7 @@ class Board:
 
     def is_move_en_passent(self, move:Move):
         piece = self.piece_map[move[0]]
-        if piece.glyph.lower() == 'p':
+        if type(piece) == Pawn:
             if (piece.is_white and piece.square < 32) or \
                 (not piece.is_white and piece.square >= 32):
                     print(move[1], self.en_passent_target)
@@ -469,12 +496,27 @@ class Board:
         return False
 
     def is_move_castling(self, move:Move):
-        if self.piece_map[move[0]].glyph.lower() == 'k':
+        if type(self.piece_map[move[0]]) == King:
             if abs(move[0] - move[1]) == 2:
                 print("castling")
                 return True
         return False
 
+    def update_castling_rights(self, start_square, end_square) -> None:
+        if self.is_move_castling((start_square, end_square)):
+            # remove one colours castling rights
+            castling_rights_to_change = ['k', 'q']
+
+            for cr_to_chg in castling_rights_to_change:
+                if self.is_white_turn: cr_to_chg = cr_to_chg.upper()
+                self.castling_rights[cr_to_chg] = False
+
+        elif type(self.piece_map[start_square]) == Rook:
+            match start_square:
+                case 0: self.castling_rights['q'] = False
+                case 7: self.castling_rights['k'] = False
+                case 56: self.castling_rights['Q'] = False
+                case 63: self.castling_rights['K'] = False
 
     def get_board_after_move(self, start_square:int, end_square:int) -> 'Board':
         '''
@@ -485,7 +527,10 @@ class Board:
 
         TODO: check for updating castling rights
         '''
+        reset_en_passent = False
         move = (start_square, end_square)
+
+        new_piece_map = self.piece_map
 
         if self.is_move_double_push(move):
             # update en_passent_target
@@ -493,29 +538,25 @@ class Board:
 
         elif self.is_move_en_passent(move):
             # clear en_passent_target
-            self.en_passent_target = -1
+            reset_en_passent = True
 
-        elif self.is_move_castling(move):
-            # remove one colours castling rights
-            castling_rights_to_change = ['k', 'q']
-            if new_piece_map[end_square].is_white:
-                map(lambda u:u.upper(), castling_rights_to_change)
-
-            for cr_to_chg in castling_rights_to_change:
-                self.casting_rights[cr_to_chg] = False
+        self.update_castling_rights(start_square, end_square)
 
 
-        new_piece_map = self.piece_map
         new_piece_map[start_square].move_to(end_square)
-        board_input = self.piece_map_to_board_input(new_piece_map)   
+
+        if reset_en_passent: self.en_passent_target = -1
+
+        board_input = self.piece_map_to_board_input(new_piece_map)
         new_move_count = self.move_count + 1 if self.is_white_turn else self.move_count
+
         if (self.en_passent_target < 32 and self.is_white_turn) or \
            ((-1 < self.en_passent_target >= 32) and not self.is_white_turn):
             self.en_passent_target = -1
 
         return Board(self.game, board_input, self.switch_is_white_turn(),
-                     new_move_count, self.halfmove_count+1, 
-                     self.casting_rights, self.en_passent_target)
+                     new_move_count, self.halfmove_count+1,
+                     self.castling_rights, self.en_passent_target)
 
     def get_clicked_piece(self) -> Piece:
         for piece in self.piece_map.values():
@@ -547,7 +588,7 @@ class Board:
                 if not self.piece_map[new_square].is_same_colour(self.piece_map[start_square]):
                     # if the piece is not the same colour as this one
                     valid_moves.append((start_square, new_square))
-                break   
+                break
             else:
                 # empty square
                 valid_moves.append((start_square, new_square))
@@ -561,7 +602,7 @@ class Board:
             for r_i in range(8):
                 square_index = (8*c_i) + r_i
                 try:
-                    glyph = self.piece_map[square_index].glyph  
+                    glyph = self.piece_map[square_index].glyph
                     if consecutive_empty > 0:
                         fen += str(consecutive_empty)
                         consecutive_empty = 0
@@ -575,9 +616,9 @@ class Board:
 
         fen += ' w ' if self.is_white_turn else ' b '
 
-        has_any_castle_right = len([active_cr for active_cr in self.casting_rights.values() if active_cr])>0
-        for castle_right in self.casting_rights.keys():
-            if self.casting_rights[castle_right]:
+        has_any_castle_right = len([active_cr for active_cr in self.castling_rights.values() if active_cr])>0
+        for castle_right in self.castling_rights.keys():
+            if self.castling_rights[castle_right]:
                 fen += castle_right
         if not has_any_castle_right: fen += '-'
         fen+=' '
@@ -619,8 +660,8 @@ class Game:
         """
         Note:
         Used to have is_white_turn and move_count in this init but because
-        they WERE only used to create the board, it makes WAYYYY more sense to 
-        have a function that turns the fen string into everything EXCEPT the 
+        they WERE only used to create the board, it makes WAYYYY more sense to
+        have a function that turns the fen string into everything EXCEPT the
         game being passed in
         """
 
@@ -628,7 +669,7 @@ class Game:
         self.display_blue = ~self.display_blue
 
     def is_inside_bounds(self, x, y) -> bool:
-        return (x >= TOP_LEFT and x <= BOTTOM_RIGHT and 
+        return (x >= TOP_LEFT and x <= BOTTOM_RIGHT and
                 y >= TOP_LEFT and y <= BOTTOM_RIGHT)
 
     def mouse_inside_bounds(self) -> bool:
@@ -645,6 +686,12 @@ class Game:
         x //= SQUARE_SIZE
         y //= SQUARE_SIZE
         return (y * 8) + x
+
+    def get_cords_from_index(self, index:int) -> Cord:
+        y, x  = divmod(index, 8)
+        x *= SQUARE_SIZE
+        y *= SQUARE_SIZE
+        return x + 100, y + 100
 
     def get_current_board(self) -> Board:
         return self.boards[-1]
@@ -682,7 +729,7 @@ class Game:
         self.display_grid()
         if self.display_blue: self.display_blue_squares()
         self.get_current_board().update_pieces()
- 
+
 
 # the main loop needs to call an event loop to establish an interactive game
 # and needs to call the game to update itself
@@ -717,7 +764,8 @@ STARTING_FEN,
 '8/6p1/5P2/4p3/3P4/2p5/1P6/8 w - - 0 1',
 'k7/8/8/3bQ3/3nR3/8/8/8 b KQkq - 0 1',
 get_random_fen(),
-'8/3pp3/8/8/8/8/3PP3/8 w - - 0 1'
+'8/3pp3/8/8/8/8/3PP3/8 b - - 0 1',
+'r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1',
 ]
 
 """
@@ -726,7 +774,7 @@ we need to center the executable environment, initiate pygame
 and create the game of chess we're going to play.
 The clock simply makes sure that the pygame window is always doing
 something, otherwise the operating system attempts the shut it down
-because it dosent think the program is doing anything then, we want 
+because it dosent think the program is doing anything then, we want
 the main loop (main()) to run every frame followed by updating pygame's
 display, not to be confused with updating the board or pieces.
 """
@@ -738,7 +786,8 @@ fen_prompt = """
     2 will help test pawn movement,
     3 will test most other pieces,
     4 is a random fen string,
-    5 is a en passent test
+    5 is a en passent test,
+    6 to test castling
 """
 
 if __name__ == "__main__":
