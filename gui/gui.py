@@ -279,7 +279,7 @@ class Piece:
                 new_rook_i = new_square + 1
 
             print("rook", rook_i, new_rook_i)
-            #self.board.piece_map[rook_i].rect.topleft = self.board.game.get_cords_from_index(new_rook_i)
+            self.board.piece_map[rook_i].rect.topleft = self.board.game.get_cords_from_index(new_rook_i)
             self.board.piece_map[rook_i].move_to(new_rook_i)
 
         pprint(self.board.piece_map)
@@ -371,10 +371,11 @@ class King(Piece):
 
         c_r_to_check = ['K', 'Q'] if self.board.is_white_turn else ['k', 'q']
         for castling_right in c_r_to_check:
-            if castling_right.lower() == 'k' and self.board.castling_rights[castling_right]:
-                valid_moves += castling_kingside_moves
-            elif castling_right.lower() == 'q' and self.board.castling_rights[castling_right]:
-                valid_moves += castling_queenside_moves
+            if self.board.castling_rights[castling_right]:
+                if castling_right.lower() == 'k':
+                    valid_moves += castling_kingside_moves
+                elif castling_right.lower() == 'q':
+                    valid_moves += castling_queenside_moves
 
         print(valid_moves)
         return valid_moves
@@ -513,6 +514,14 @@ class Board:
                 case 7: self.castling_rights['k'] = False
                 case 56: self.castling_rights['Q'] = False
                 case 63: self.castling_rights['K'] = False
+
+        elif type(self.piece_map[start_square]) == King:
+            if self.piece_map[start_square].is_white:
+                self.castling_rights['K'] = False
+                self.castling_rights['Q'] = False
+            else:
+                self.castling_rights['k'] = False
+                self.castling_rights['q'] = False
 
     def get_board_after_move(self, start_square:int, end_square:int) -> 'Board':
         '''
