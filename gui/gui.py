@@ -278,7 +278,6 @@ class Piece:
                 rook_i = new_square - 2
                 new_rook_i = new_square + 1
 
-            print("rook", rook_i, new_rook_i)
             self.board.piece_map[rook_i].rect.topleft = self.board.game.get_cords_from_index(new_rook_i)
             self.board.piece_map[rook_i].move_to(new_rook_i)
 
@@ -377,7 +376,6 @@ class King(Piece):
                 elif castling_right.lower() == 'q':
                     valid_moves += castling_queenside_moves
 
-        print(valid_moves)
         return valid_moves
 
 class Pawn(Piece):
@@ -723,6 +721,13 @@ class Game:
                 black_square(self.surface, image, rect)
             else:
                 white_square(self.surface, image, rect)
+            
+            square_num = game.get_square_index(x, y)
+            font = pg.font.Font(None, 32)
+            font_color = (0, 0, 0)
+            font_rect = pg.Rect(x, y, 10, 10)
+            txt_surf = font.render(str(square_num), True, font_color)
+            self.surface.blit(txt_surf, font_rect)
 
     def clear_surface(self) -> None:
         self.surface.fill(0)
