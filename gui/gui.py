@@ -5,6 +5,10 @@ import math
 from random import randint
 from pprint import pprint
 
+sys.path.insert(0, "/home/alonge/Documents/code/capstone/python-chess")
+import uci_handler as engine
+
+
 PiecePositionInput = tuple[int, int, int, str]
 PIECE_X = 0
 PIECE_Y = 1
@@ -86,7 +90,12 @@ def make_squares_blue(surface, square_size, squares:list[int]) -> None:
 
 def square_index_to_algebraic(square_index:int) -> str:
     row, column = divmod(square_index, 8)
-    return INT_TO_LETTER[column] + str(column)
+    return INT_TO_LETTER[column] + str(8 - (row))
+
+def algebraic_to_square(square:str) -> int:
+    column_str, row = square[0], int(square[1])
+    column = {v:k for k, v in INT_TO_LETTER.items()}[column_str]
+    return (8 - row) * 8 + column
 
 def multiply_in_tuple(t1:tuple[int, int], multiplier:int) -> tuple[int, int]:
     return (t1[0] * multiplier, t1[1] * multiplier)
@@ -174,8 +183,6 @@ def on_mouse_up(game) -> None:
             new_board = cur_board.get_board_after_double_push((start_square,
                                                                end_square))
 
-    piece.snap_to_square()
-    piece.click = False
 
     game.add_board(new_board)
     print(game.get_current_board().get_fen())
@@ -264,39 +271,17 @@ class Piece:
         # with new index as key, set value to self
         # then take original location in map and delete
         # set self.square to new location
+        cur_board = self.board
         old_square = self.square
         move = (old_square, new_square)
-        index_to_del = old_square
 
         print(move)
 
-        # TO DO implement castling and en passent here (functionized)
-        if self.board.is_move_en_passent(move):
-            print('Move is en passent')
-            # delete piece above or below piece, not square moving to
-            dir = 1 if self.is_white else -1
-            index_to_del = new_square + (dir*8)
+        cur_board.piece_map[new_square] = self
+        del cur_board.piece_map[old_square]
+       
+        cur_board.piece_map[new_square].rect.topleft = cur_board.game.get_cords_from_index(new_square) 
 
-        elif self.board.is_move_castling(move):
-            print("Move is castling")
-            # move rook as well
-            move_diff = old_square - new_square
-            if move_diff == -2:
-                # short castle
-                rook_i = new_square + 1
-                new_rook_i = new_square - 1
-
-            elif move_diff == 2:
-                # long castle
-                rook_i = new_square - 2
-                new_rook_i = new_square + 1
-
-            self.board.piece_map[rook_i].rect.topleft = self.board.game.get_cords_from_index(new_rook_i)
-            self.board.piece_map[rook_i].move_to(new_rook_i)
-
-        self.board.piece_map[new_square] = self
-        del self.board.piece_map[index_to_del]
-        
         self.square = self.get_square_index()
 
     def get_legal_moves(self) -> list[Move]:
@@ -562,17 +547,19 @@ class Board:
 
         new_move_count = self.move_count + 1 if self.is_white_turn else self.move_count
 
+        new_en_passent_target = self.en_passent_target
+
         new_piece_map[start_square].move_to(end_square)
         piece_map_board_input = self.piece_map_to_board_input(new_piece_map)
 
         if (-1 < self.en_passent_target < 32 and self.is_white_turn) or \
                 (self.en_passent_target >= 32 and not self.is_white_turn):
-            self.en_passent_target = -1
+            new_en_passent_target = -1
      
         return Board(self.game, piece_map_board_input, 
                      self.switch_is_white_turn(), new_move_count,
                      new_halfmove_count, self.castling_rights, 
-                     self.en_passent_target)
+                     new_en_passent_target)
 
     def get_board_after_capture(self, move:Move) -> 'Board':
         start_square, end_square = move
@@ -583,17 +570,19 @@ class Board:
 
         new_move_count = self.move_count + 1 if self.is_white_turn else self.move_count
 
+        new_en_passent_target = self.en_passent_target
+
         new_piece_map[start_square].move_to(end_square)
         piece_map_board_input = self.piece_map_to_board_input(new_piece_map)
 
         if (-1 < self.en_passent_target < 32 and self.is_white_turn) or \
         (self.en_passent_target >= 32 and not self.is_white_turn):
-            self.en_passent_target = -1
+            new_en_passent_target = -1
 
         return Board(self.game, piece_map_board_input,
                      self.switch_is_white_turn(), new_move_count,
                      new_halfmove_count, self.castling_rights,
-                     self.en_passent_target)
+                     new_en_passent_target)
 
     def get_board_after_castle_kingside(self, move:Move) -> 'Board':
         start_square, end_square = move
@@ -603,19 +592,25 @@ class Board:
 
         new_move_count = self.move_count + 1 if self.is_white_turn else self.move_count
         new_halfmove_count = self.halfmove_count + 1
-    
+
+        new_en_passent_target = self.en_passent_target
+        
+        rook_start_sqr = end_square + 1
+        rook_end_sqr = end_square - 1
+        
+        new_piece_map[rook_start_sqr].move_to(rook_end_sqr)
         new_piece_map[start_square].move_to(end_square)
 
         piece_map_board_input = self.piece_map_to_board_input(new_piece_map)
 
         if (-1 < self.en_passent_target < 32 and self.is_white_turn) or \
         (self.en_passent_target >= 32 and not self.is_white_turn):
-            self.en_passent_target = -1
+            new_en_passent_target = -1
 
         return Board(self.game, piece_map_board_input,
                      self.switch_is_white_turn(), new_move_count,
                      new_halfmove_count, self.castling_rights,
-                     self.en_passent_target)
+                     new_en_passent_target)
 
 
     def get_board_after_castle_queenside(self, move:Move) -> 'Board':
@@ -626,19 +621,25 @@ class Board:
 
         new_move_count = self.move_count + 1 if self.is_white_turn else self.move_count
         new_halfmove_count = self.halfmove_count + 1
+
+        new_en_passent_target = self.en_passent_target
+        
+        rook_start_sqr = end_square - 2 
+        rook_end_sqr = end_square + 1
     
         new_piece_map[start_square].move_to(end_square)
+        new_piece_map[rook_start_sqr].move_to(rook_end_sqr)
 
         piece_map_board_input = self.piece_map_to_board_input(new_piece_map)
 
         if (-1 < self.en_passent_target < 32 and self.is_white_turn) or \
         (self.en_passent_target >= 32 and not self.is_white_turn):
-            self.en_passent_target = -1
+            new_en_passent_target = -1
 
         return Board(self.game, piece_map_board_input,
                      self.switch_is_white_turn(), new_move_count,
                      new_halfmove_count, self.castling_rights,
-                     self.en_passent_target)
+                     new_en_passent_target)
 
 
     def get_board_after_en_passent(self, move:Move) -> 'Board':
@@ -649,11 +650,14 @@ class Board:
 
         new_move_count = self.move_count + 1 if self.is_white_turn else self.move_count
         new_halfmove_count = 0
+
+        new_en_passent_target = self.en_passent_target
         
         direction = -1 if self.is_white_turn else 1
         square_to_del = end_square + (8 * -direction)
         
         new_piece_map[start_square].move_to(end_square)
+        del new_piece_map[square_to_del]
 
         piece_map_board_input = self.piece_map_to_board_input(new_piece_map)
         
@@ -888,9 +892,12 @@ class Game:
             square_num = game.get_square_index(x, y)
             font = pg.font.Font(None, 32)
             font_color = (0, 0, 0)
-            font_rect = pg.Rect(x, y, 10, 10)
-            txt_surf = font.render(str(square_num), True, font_color)
-            self.surface.blit(txt_surf, font_rect)
+            square_num_rect = pg.Rect(x+10, y, 10, 10)
+            algebraic_rect = pg.Rect(x+65, y, 10, 10)
+            txt_square_i = font.render(str(square_num), True, font_color)
+            txt_algebraic = font.render(str(square_index_to_algebraic(square_num)), True, font_color)
+            self.surface.blit(txt_square_i, square_num_rect)
+            #self.surface.blit(txt_algebraic, algebraic_rect)
 
     def clear_surface(self) -> None:
         self.surface.fill(0)
