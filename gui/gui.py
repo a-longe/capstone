@@ -51,6 +51,7 @@ class MoveEvalResponces:
     CASTLE_QUEENSIDE = 4
     EN_PASSENT = 5
     DOUBLE_PUSH = 6
+    PROMOTION = 7
 
 def add_tuples(t1:tuple, t2:tuple) -> tuple[int, int]:
     """Precondition: tuples must both be len(2)"""
@@ -182,6 +183,10 @@ def on_mouse_up(game) -> None:
         case MoveEvalResponces.DOUBLE_PUSH:
             new_board = cur_board.get_board_after_double_push((start_square,
                                                                end_square))
+
+        case MoveEvalResponces.PROMOTION:
+            new_board = cur_board.get_board_after_promotion((start_square,
+                                                             end_square))
 
 
     game.add_board(new_board)
@@ -377,6 +382,25 @@ class Pawn(Piece):
     def __init__(self, board, rect, glyph) -> None:
         Piece.__init__(self, board, rect, glyph)
 
+    def promote(self) -> None:
+        has_valid_glyph = False
+        while not has_valid_glyph:
+            has_valid_glyph = True
+            glyph = glyph.upper() if self.is_white else glyph
+            match glyph:
+                case 'q' | 'Q':
+                    self = Queen(self.board, self.rect, glyph)
+                case 'n' | 'N':
+                    self = Knight(self.board, self.rect, glyph)
+                case 'r' | 'R':
+                    self = Rook(self.board, self.rect, glyph)
+                case 'b' | 'R':
+                    self = Bishop(self.board, self.rect, glyph)
+                case _:
+                    print('Invalid Glyph')
+                    has_valid_glyph = False
+
+
     def get_legal_moves(self) -> list[Move]:
         valid_moves = []
         direction = -1 if self.is_white else 1
@@ -453,8 +477,9 @@ class Board:
                     return MoveEvalResponces.CASTLE_KINGSIDE
                 else:
                     return MoveEvalResponces.CASTLE_QUEENSIDE
-            if self.is_move_en_passent(move): return MoveEvalResponces.EN_PASSENT
-            if self.is_move_double_push(move): return MoveEvalResponces.DOUBLE_PUSH
+            elif self.is_move_en_passent(move): return MoveEvalResponces.EN_PASSENT
+            elif self.is_move_double_push(move): return MoveEvalResponces.DOUBLE_PUSH
+            elif self.is_move_promotion(move): return MoveEvalResponces.PROMOTION
 
             # does piece collide with another piece
             is_colliding = new_square in game.get_current_board().piece_map.keys()
@@ -475,6 +500,13 @@ class Board:
     def piece_map_to_board_input(self, piece_map:dict[int, 'Piece']) -> PiecePositionInput:
         pieces = piece_map.values()
         return [(*piece.rect[:3], piece.glyph) for piece in pieces]
+
+    def is_move_promotion(self, move:Move) -> bool:
+        if type(self.piece_map[move[0]]) == Pawn:
+            end_row = 0 if self.piece_map[move[0]].is_white else 7
+            move_to_row = divmod(move[1])[0]
+            return move_to_row == end_row
+        return False
 
     def is_move_double_push(self, move:Move):
         if type(self.piece_map[move[0]]) == Pawn:
@@ -687,6 +719,29 @@ class Board:
                      new_halfmove_count, self.castling_rights,
                      new_en_passent_target)
 
+    def get_board_after_promotion(self, start_square:int, end_square:int) -> 'Board':
+        start_square, end_square = move
+        new_piece_map = self.piece_map 
+
+        self.update_castling_rights(*move)
+
+        new_move_count = self.move_count + 1 if self.is_white_turn else self.move_count
+        new_halfmove_count = 0
+
+        new_en_passent_target = self.en_passent_target
+            
+        new_piece_map[start_square].move_to(end_square)
+
+        piece_map_board_input = self.piece_map_to_board_input(new_piece_map)
+
+        if (-1 < self.en_passent_target < 32 and self.is_white_turn) or \
+        (self.en_passent_target >= 32 and not self.is_white_turn):
+            new_en_passent_target = -1
+
+        return Board(self.game, piece_map_board_input,
+                     self.switch_is_white_turn(), new_move_count,
+                     new_halfmove_count, self.castling_rights,
+                     new_en_passent_target)
 
     def get_board_after_move(self, start_square:int, end_square:int) -> 'Board':
         '''
