@@ -43,6 +43,10 @@ class MoveEvalResponces:
     INVALID_MOVE = 0
     MOVE_TO_EMPTY = 1
     CAPTURE_MOVE = 2
+    CASTLE_KINGSIDE = 3
+    CASTLE_QUEENSIDE = 4
+    EN_PASSENT = 5
+    DOUBLE_PUSH = 6
 
 def add_tuples(t1:tuple, t2:tuple) -> tuple[int, int]:
     """Precondition: tuples must both be len(2)"""
@@ -123,50 +127,59 @@ def on_mouse_down(game):
         # The event positions is the mouse coordinates
         if piece.rect.collidepoint(pg.mouse.get_pos()) and \
            piece.can_pickup():
+            print(piece)
             # store current center
             piece.previous_center = piece.rect.center
             piece.click = True
 
-def on_mouse_up(game) -> None:
-    pieces_to_be_deleted = []
-    pieces_to_be_moved = []
 
+def on_mouse_up(game) -> None:
+    cur_board = game.get_current_board()
     piece = game.get_current_board().get_clicked_piece()
     if piece == -1: return # would like to make this nicer but will get back to it later
     start_square = piece.square
 
     end_square = mouse_square = game.get_square_index(*pg.mouse.get_pos())
 
+    piece.snap_to_square()
+    piece.click = False
+
     match game.get_current_board().eval_move(piece, mouse_square):
         case MoveEvalResponces.INVALID_MOVE:
             piece.return_to_previous()
+            return
+
         case MoveEvalResponces.MOVE_TO_EMPTY:
-            pieces_to_be_moved.append(piece)
-            # new_board = new_move_to_empty_board(start_square, end_square)
+            new_board = cur_board.get_board_after_halfmove((start_square,
+                                                              end_square))
+
         case MoveEvalResponces.CAPTURE_MOVE:
-            piece_to_be_captured = game.get_current_board().piece_map[mouse_square]
-            if type(piece_to_be_captured) == King: game.is_game_over = True
-            pieces_to_be_moved.append(piece)
-            pieces_to_be_deleted.append(piece_to_be_captured)
-        # add castling and en passent here (kingside / queenside)
-        case MoveEvalResponces.KING_CASTLE:
-            # new_board = board.new_king_castle_board()
-            pass
+            if type(cur_board.piece_map[end_square]) == King: game.is_game_over = True
+            new_board = cur_board.get_board_after_capture((start_square,
+                                                           end_square))
+
+        case MoveEvalResponces.CASTLE_KINGSIDE:
+            new_board = cur_board.get_board_after_castle_kingside((start_square,
+                                                                   end_square))
+            
+        case MoveEvalResponces.CASTLE_QUEENSIDE:
+            new_board = cur_board.get_board_after_castle_queenside((start_square,
+                                                               end_square))
+
+        case MoveEvalResponces.EN_PASSENT:
+            new_board = cur_board.get_board_after_en_passent((start_square,
+                                                               end_square))
+
+        case MoveEvalResponces.DOUBLE_PUSH:
+            new_board = cur_board.get_board_after_double_push((start_square,
+                                                               end_square))
+
     piece.snap_to_square()
     piece.click = False
-    # game.add_board(new_board)
 
-    for piece_to_del in pieces_to_be_deleted:
-        game.get_current_board().del_piece(piece_to_del)
-    for piece_to_be_moved in pieces_to_be_moved:
-        new_square = piece_to_be_moved.get_square_index()
-        old_square = piece_to_be_moved.square
-
-        game.add_board(game.get_current_board().get_board_after_move(old_square,
-                                                                    new_square))
-        print(f"move #{len(game.boards) // 2}")
-        print(game.get_current_board().get_fen())
-    #pprint(self.piece_map)
+    game.add_board(new_board)
+    print(game.get_current_board().get_fen())
+    pprint(cur_board.piece_map)
 
 def fen_to_pieces(fen, game) -> PiecePositionInput:
     lo_pieces = []
@@ -281,12 +294,9 @@ class Piece:
             self.board.piece_map[rook_i].rect.topleft = self.board.game.get_cords_from_index(new_rook_i)
             self.board.piece_map[rook_i].move_to(new_rook_i)
 
-        pprint(self.board.piece_map)
-
-
         self.board.piece_map[new_square] = self
         del self.board.piece_map[index_to_del]
-
+        
         self.square = self.get_square_index()
 
     def get_legal_moves(self) -> list[Move]:
@@ -415,7 +425,7 @@ class Pawn(Piece):
 class Board:
     def __init__(self, game, piece_positions:list[PiecePositionInput],
                 is_white_turn:bool, move_count:int, halfmove_count:int,
-                castling_rights:dict[str:bool], en_passent_target:int) -> None:
+                castling_rights:dict[str, bool], en_passent_target:int) -> None:
         self.surface = game.surface # passed by reference
         self.game = game
         self.piece_map = {}
@@ -448,10 +458,19 @@ class Board:
 
     def eval_move(self, piece, new_square) -> int:
         # if valid location and is legal move()
+        move = (piece.square, new_square)
         is_valid = self.game.mouse_inside_bounds() and \
                    new_square in [move[1] for move in piece.get_legal_moves()]
 
         if is_valid:
+            if self.is_move_castling(move):
+                if self.is_castle_kingside(move):
+                    return MoveEvalResponces.CASTLE_KINGSIDE
+                else:
+                    return MoveEvalResponces.CASTLE_QUEENSIDE
+            if self.is_move_en_passent(move): return MoveEvalResponces.EN_PASSENT
+            if self.is_move_double_push(move): return MoveEvalResponces.DOUBLE_PUSH
+
             # does piece collide with another piece
             is_colliding = new_square in game.get_current_board().piece_map.keys()
 
@@ -468,7 +487,7 @@ class Board:
         else:
             return MoveEvalResponces.INVALID_MOVE
 
-    def piece_map_to_board_input(self, piece_map:dict[int:'Piece']) -> PiecePositionInput:
+    def piece_map_to_board_input(self, piece_map:dict[int, 'Piece']) -> PiecePositionInput:
         pieces = piece_map.values()
         return [(*piece.rect[:3], piece.glyph) for piece in pieces]
 
@@ -497,6 +516,14 @@ class Board:
                 return True
         return False
 
+    def is_castle_kingside(self, move:Move) -> bool:
+        """
+        Precondition: move must be a castle for function to be accurate
+        """
+        start, end = move
+        diff = end - start
+        return diff == 2
+
     def update_castling_rights(self, start_square, end_square) -> None:
         if self.is_move_castling((start_square, end_square)):
             # remove one colours castling rights
@@ -520,6 +547,142 @@ class Board:
             else:
                 self.castling_rights['k'] = False
                 self.castling_rights['q'] = False
+
+
+    def get_board_after_halfmove(self, move:Move) -> 'Board':
+        start_square, end_square = move
+        if type(self.piece_map[start_square]) == Pawn:
+            new_halfmove_count = 0
+        else:
+            new_halfmove_count = self.halfmove_count + 1
+
+        new_piece_map = self.piece_map
+
+        self.update_castling_rights(*move)
+
+        new_move_count = self.move_count + 1 if self.is_white_turn else self.move_count
+
+        new_piece_map[start_square].move_to(end_square)
+        piece_map_board_input = self.piece_map_to_board_input(new_piece_map)
+
+        if (-1 < self.en_passent_target < 32 and self.is_white_turn) or \
+                (self.en_passent_target >= 32 and not self.is_white_turn):
+            self.en_passent_target = -1
+     
+        return Board(self.game, piece_map_board_input, 
+                     self.switch_is_white_turn(), new_move_count,
+                     new_halfmove_count, self.castling_rights, 
+                     self.en_passent_target)
+
+    def get_board_after_capture(self, move:Move) -> 'Board':
+        start_square, end_square = move
+        new_halfmove_count = 0
+        new_piece_map = self.piece_map
+
+        self.update_castling_rights(*move)
+
+        new_move_count = self.move_count + 1 if self.is_white_turn else self.move_count
+
+        new_piece_map[start_square].move_to(end_square)
+        piece_map_board_input = self.piece_map_to_board_input(new_piece_map)
+
+        if (-1 < self.en_passent_target < 32 and self.is_white_turn) or \
+        (self.en_passent_target >= 32 and not self.is_white_turn):
+            self.en_passent_target = -1
+
+        return Board(self.game, piece_map_board_input,
+                     self.switch_is_white_turn(), new_move_count,
+                     new_halfmove_count, self.castling_rights,
+                     self.en_passent_target)
+
+    def get_board_after_castle_kingside(self, move:Move) -> 'Board':
+        start_square, end_square = move
+        new_piece_map = self.piece_map
+
+        self.update_castling_rights(*move)
+
+        new_move_count = self.move_count + 1 if self.is_white_turn else self.move_count
+        new_halfmove_count = self.halfmove_count + 1
+    
+        new_piece_map[start_square].move_to(end_square)
+
+        piece_map_board_input = self.piece_map_to_board_input(new_piece_map)
+
+        if (-1 < self.en_passent_target < 32 and self.is_white_turn) or \
+        (self.en_passent_target >= 32 and not self.is_white_turn):
+            self.en_passent_target = -1
+
+        return Board(self.game, piece_map_board_input,
+                     self.switch_is_white_turn(), new_move_count,
+                     new_halfmove_count, self.castling_rights,
+                     self.en_passent_target)
+
+
+    def get_board_after_castle_queenside(self, move:Move) -> 'Board':
+        start_square, end_square = move
+        new_piece_map = self.piece_map
+
+        self.update_castling_rights(*move)
+
+        new_move_count = self.move_count + 1 if self.is_white_turn else self.move_count
+        new_halfmove_count = self.halfmove_count + 1
+    
+        new_piece_map[start_square].move_to(end_square)
+
+        piece_map_board_input = self.piece_map_to_board_input(new_piece_map)
+
+        if (-1 < self.en_passent_target < 32 and self.is_white_turn) or \
+        (self.en_passent_target >= 32 and not self.is_white_turn):
+            self.en_passent_target = -1
+
+        return Board(self.game, piece_map_board_input,
+                     self.switch_is_white_turn(), new_move_count,
+                     new_halfmove_count, self.castling_rights,
+                     self.en_passent_target)
+
+
+    def get_board_after_en_passent(self, move:Move) -> 'Board':
+        start_square, end_square = move
+        new_piece_map = self.piece_map
+
+        self.update_castling_rights(*move)
+
+        new_move_count = self.move_count + 1 if self.is_white_turn else self.move_count
+        new_halfmove_count = 0
+        
+        direction = -1 if self.is_white_turn else 1
+        square_to_del = end_square + (8 * -direction)
+        
+        new_piece_map[start_square].move_to(end_square)
+
+        piece_map_board_input = self.piece_map_to_board_input(new_piece_map)
+        
+        new_en_passent_target = -1
+        
+        return Board(self.game, piece_map_board_input,
+                     self.switch_is_white_turn(), new_move_count,
+                     new_halfmove_count, self.castling_rights,
+                     new_en_passent_target)
+
+    def get_board_after_double_push(self, move:Move) -> 'Board':
+        start_square, end_square = move
+        new_piece_map = self.piece_map
+        new_en_passent_target = sum(move) // 2 
+
+        self.update_castling_rights(*move)
+
+        new_move_count = self.move_count + 1 if self.is_white_turn else self.move_count
+        new_halfmove_count = 0
+            
+        new_piece_map[start_square].move_to(end_square)
+
+        piece_map_board_input = self.piece_map_to_board_input(new_piece_map)
+
+        return Board(self.game, piece_map_board_input,
+                     self.switch_is_white_turn(), new_move_count,
+                     new_halfmove_count, self.castling_rights,
+                     new_en_passent_target)
+
 
     def get_board_after_move(self, start_square:int, end_square:int) -> 'Board':
         '''
@@ -705,7 +868,7 @@ class Game:
         y *= self.square_size
         return x + 100, y + 100
 
-    def get_current_board(self) -> Board:
+    def get_current_board(self) -> 'Board':
         return self.boards[-1]
 
     def add_board(self, board) -> None:
