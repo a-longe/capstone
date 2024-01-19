@@ -385,6 +385,7 @@ class Pawn(Piece):
     def promote(self) -> None:
         has_valid_glyph = False
         while not has_valid_glyph:
+            glyph = input("enter a valid glyph")
             has_valid_glyph = True
             glyph = glyph.upper() if self.is_white else glyph
             match glyph:
@@ -730,7 +731,8 @@ class Board:
 
         new_en_passent_target = self.en_passent_target
             
-        new_piece_map[start_square].move_to(end_square)
+        new_piece_map[start_square].move_to(end_square) 
+        new_piece_map[start_square].promote()
 
         piece_map_board_input = self.piece_map_to_board_input(new_piece_map)
 
