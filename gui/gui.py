@@ -387,19 +387,20 @@ class Pawn(Piece):
         while not has_valid_glyph:
             glyph = input("enter a valid glyph")
             has_valid_glyph = True
-            glyph = glyph.upper() if self.is_white else glyph
+            glyph = glyph.upper() if self.is_white else glyph.lower()
             match glyph:
                 case 'q' | 'Q':
-                    self = Queen(self.board, self.rect, glyph)
+                    self.board.piece_map[self.square] = Queen(self.board, self.rect, glyph)
                 case 'n' | 'N':
-                    self = Knight(self.board, self.rect, glyph)
+                    self.board.piece_map[self.square] = Knight(self.board, self.rect, glyph)
                 case 'r' | 'R':
-                    self = Rook(self.board, self.rect, glyph)
+                    self.board.piece_map[self.square] = Rook(self.board, self.rect, glyph)
                 case 'b' | 'R':
-                    self = Bishop(self.board, self.rect, glyph)
+                    self.board.piece_map[self.square] = Bishop(self.board, self.rect, glyph)
                 case _:
                     print('Invalid Glyph')
                     has_valid_glyph = False
+        print(f"after promotion: {self}")
 
 
     def get_legal_moves(self) -> list[Move]:
@@ -505,7 +506,7 @@ class Board:
     def is_move_promotion(self, move:Move) -> bool:
         if type(self.piece_map[move[0]]) == Pawn:
             end_row = 0 if self.piece_map[move[0]].is_white else 7
-            move_to_row = divmod(move[1])[0]
+            move_to_row = divmod(move[1], 8)[0]
             return move_to_row == end_row
         return False
 
@@ -720,7 +721,7 @@ class Board:
                      new_halfmove_count, self.castling_rights,
                      new_en_passent_target)
 
-    def get_board_after_promotion(self, start_square:int, end_square:int) -> 'Board':
+    def get_board_after_promotion(self, move:Move) -> 'Board':
         start_square, end_square = move
         new_piece_map = self.piece_map 
 
@@ -728,11 +729,11 @@ class Board:
 
         new_move_count = self.move_count + 1 if self.is_white_turn else self.move_count
         new_halfmove_count = 0
-
+        
         new_en_passent_target = self.en_passent_target
-            
-        new_piece_map[start_square].move_to(end_square) 
+
         new_piece_map[start_square].promote()
+        new_piece_map[start_square].move_to(end_square) 
 
         piece_map_board_input = self.piece_map_to_board_input(new_piece_map)
 
@@ -1012,6 +1013,7 @@ STARTING_FEN,
 get_random_fen(),
 '8/3pp3/8/8/8/8/3PP3/8 b - - 0 1',
 'r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1',
+'8/3P4/8/8/8/8/4p3/8 w - - 0 1'
 ]
 
 """
@@ -1033,7 +1035,8 @@ fen_prompt = """
     3 will test most other pieces,
     4 is a random fen string,
     5 is a en passent test,
-    6 to test castling
+    6 to test castling,
+    7 to test promotion
 """
 
 if __name__ == "__main__":
