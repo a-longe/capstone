@@ -154,40 +154,8 @@ def on_mouse_up(game) -> None:
     piece.snap_to_square()
     piece.click = False
 
-    match game.get_current_board().eval_move(piece, mouse_square):
-        case MoveEvalResponces.INVALID_MOVE:
-            piece.return_to_previous()
-            return
-
-        case MoveEvalResponces.MOVE_TO_EMPTY:
-            new_board = cur_board.get_board_after_halfmove((start_square,
-                                                              end_square))
-
-        case MoveEvalResponces.CAPTURE_MOVE:
-            if type(cur_board.piece_map[end_square]) == King: game.is_game_over = True
-            new_board = cur_board.get_board_after_capture((start_square,
-                                                           end_square))
-
-        case MoveEvalResponces.CASTLE_KINGSIDE:
-            new_board = cur_board.get_board_after_castle_kingside((start_square,
-                                                                   end_square))
-            
-        case MoveEvalResponces.CASTLE_QUEENSIDE:
-            new_board = cur_board.get_board_after_castle_queenside((start_square,
-                                                               end_square))
-
-        case MoveEvalResponces.EN_PASSENT:
-            new_board = cur_board.get_board_after_en_passent((start_square,
-                                                               end_square))
-
-        case MoveEvalResponces.DOUBLE_PUSH:
-            new_board = cur_board.get_board_after_double_push((start_square,
-                                                               end_square))
-
-        case MoveEvalResponces.PROMOTION:
-            new_board = cur_board.get_board_after_promotion((start_square,
-                                                             end_square))
-
+    new_board = cur_board.get_board_after_move(start_square, end_square)
+    print(new_board)    
 
     game.add_board(new_board)
     print(game.get_current_board().get_fen())
@@ -284,8 +252,6 @@ class Piece:
 
         cur_board.piece_map[new_square] = self
         del cur_board.piece_map[old_square]
-        
-        cur_board.piece_map[new_square].rect.topleft = cur_board.game.get_cords_from_index(new_square) 
 
         self.square = self.get_square_index()
 
@@ -310,7 +276,7 @@ class Bishop(Piece):
         valid_moves = []
         for offset in OFFSETS:
             valid_moves += self.board.get_sliding_moves(self.square, offset)
-        return valid_moves
+        return [valid_move for valid_move in valid_moves if self.board.does_move_attack_king(not self.is_white, valid_move)]
 
 class Rook(Piece):
     def __init__(self, board, rect, glyph) -> None:
@@ -322,19 +288,18 @@ class Rook(Piece):
         valid_moves = []
         for offset in OFFSETS:
             valid_moves += self.board.get_sliding_moves(self.square, offset)
-        return valid_moves
+        return [valid_move for valid_move in valid_moves if self.board.does_move_attack_king(not self.is_white, valid_move)]
 
 class Queen(Piece):
     def __init__(self, board, rect, glyph) -> None:
         Piece.__init__(self, board, rect, glyph)
-
 
     def get_legal_moves(self) -> list[Move]:
         OFFSETS = ((-1, -1) ,(-1, 1), (1, 1), (1, -1), (1, 0) ,(-1, 0), (0, 1), (0, -1))
         valid_moves = []
         for offset in OFFSETS:
             valid_moves += self.board.get_sliding_moves(self.square, offset)
-        return valid_moves
+        return [valid_move for valid_move in valid_moves if self.board.does_move_attack_king(not self.is_white, valid_move)]
 
 class Knight(Piece):
     def __init__(self, board, rect, glyph) -> None:
@@ -343,7 +308,8 @@ class Knight(Piece):
     def get_legal_moves(self) -> list[Move]:
         OFFSETS = ((-2, -1), (-2, 1), (-1, -2), (-1, 2), \
                     (1, -2), (1, 2), (2, -1), (2, 1))
-        return self.board.get_jumping_moves(self.square, OFFSETS)
+        valid_moves =  self.board.get_jumping_moves(self.square, OFFSETS)
+        return [valid_move for valid_move in valid_moves if self.board.does_move_attack_king(not self.is_white, valid_move)]
 
 class King(Piece):
     def __init__(self, board, rect, glyph) -> None:
@@ -376,7 +342,7 @@ class King(Piece):
                 elif castling_right.lower() == 'q':
                     valid_moves += castling_queenside_moves
 
-        return valid_moves
+        return [valid_move for valid_move in valid_moves if self.board.does_move_attack_king(not self.is_white, valid_move)]
 
 class Pawn(Piece):
     def __init__(self, board, rect, glyph) -> None:
@@ -429,7 +395,7 @@ class Pawn(Piece):
             if new_sqr not in self.board.piece_map.keys():
                 # no piece at new square
                 valid_moves.append((self.square, new_sqr))
-        return valid_moves
+        return [valid_move for valid_move in valid_moves if self.board.does_move_attack_king(not self.is_white, valid_move)]
 
 
 class Board:
@@ -465,6 +431,19 @@ class Board:
         self.castling_rights = castling_rights
         self.en_passent_target = en_passent_target
         self.legal_moves_map = {}
+
+    def does_move_attack_king(self, is_king_white:bool, move:Move) -> bool:
+        return False
+        glyph_to_find = 'K' if is_king_white else 'k'
+        king_square = filter(lambda p : p.glyph == glyph_to_find,
+                             self.get_pieces())
+        return move[1] == king_square
+
+    def get_all_valid_moves(self) -> list[Move]:
+        valid_moves = []
+        for piece in self.get_pieces():
+            valid_moves += piece.get_legal_moves()
+        return valid_moves
 
     def eval_move(self, piece, new_square) -> int:
         # if valid location and is legal move()
@@ -746,42 +725,45 @@ class Board:
                      new_en_passent_target)
 
     def get_board_after_move(self, start_square:int, end_square:int) -> 'Board':
-        '''
-        1. determine the piece map after a move
-        2. convert from piece map back to the format we used to instantiate
-            a board [(rect, glyph)]
-        3. return said board
-        '''
-        reset_en_passent = False
-        move = (start_square, end_square)
+        piece = self.piece_map[start_square]
+        move_evalutation = self.eval_move(piece, end_square)
+        print(f"move_eval: {move_evalutation}")
+        match move_evalutation:
+            case MoveEvalResponces.INVALID_MOVE:
+                piece.return_to_previous()
+                return
 
-        new_piece_map = self.piece_map
+            case MoveEvalResponces.MOVE_TO_EMPTY:
+                new_board = self.get_board_after_halfmove((start_square,
+                                                              end_square))
 
-        if self.is_move_double_push(move):
-            # update en_passent_target
-            self.en_passent_target = (start_square + end_square) // 2
+            case MoveEvalResponces.CAPTURE_MOVE:
+                if type(self.piece_map[end_square]) == King: game.is_game_over = True
+                new_board = self.get_board_after_capture((start_square,
+                                                           end_square))
 
-        elif self.is_move_en_passent(move):
-            # clear en_passent_target
-            reset_en_passent = True
+            case MoveEvalResponces.CASTLE_KINGSIDE:
+                new_board = self.get_board_after_castle_kingside((start_square,
+                                                                   end_square))
+            
+            case MoveEvalResponces.CASTLE_QUEENSIDE:
+                new_board = self.get_board_after_castle_queenside((start_square,
+                                                               end_square))
 
-        self.update_castling_rights(start_square, end_square)
+            case MoveEvalResponces.EN_PASSENT:
+                new_board = self.get_board_after_en_passent((start_square,
+                                                               end_square))
 
+            case MoveEvalResponces.DOUBLE_PUSH:
+                new_board = self.get_board_after_double_push((start_square,
+                                                               end_square))
 
-        new_piece_map[start_square].move_to(end_square)
-
-        if reset_en_passent: self.en_passent_target = -1
-
-        board_input = self.piece_map_to_board_input(new_piece_map)
-        new_move_count = self.move_count + 1 if self.is_white_turn else self.move_count
-
-        if (self.en_passent_target < 32 and self.is_white_turn) or \
-           ((-1 < self.en_passent_target >= 32) and not self.is_white_turn):
-            self.en_passent_target = -1
-
-        return Board(self.game, board_input, self.switch_is_white_turn(),
-                     new_move_count, self.halfmove_count+1,
-                     self.castling_rights, self.en_passent_target)
+            case MoveEvalResponces.PROMOTION:
+                new_board = self.get_board_after_promotion((start_square,
+                                                             end_square))
+            case _:
+                print('error with eval move')
+        return new_board
 
     def get_clicked_piece(self) -> Piece:
         for piece in self.piece_map.values():
@@ -1012,7 +994,8 @@ STARTING_FEN,
 get_random_fen(),
 '8/3pp3/8/8/8/8/3PP3/8 b - - 0 1',
 'r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1',
-'8/3P4/8/8/8/8/4p3/8 w - - 0 1'
+'8/3P4/8/8/8/8/4p3/8 w - - 0 1',
+'8/4k3/4r3/8/8/3R4/3K4/8 w - - 0 1'
 ]
 
 """
@@ -1035,7 +1018,8 @@ fen_prompt = """
     4 is a random fen string,
     5 is a en passent test,
     6 to test castling,
-    7 to test promotion
+    7 to test promotion,
+    8 for testing *legal* moves
 """
 
 if __name__ == "__main__":
