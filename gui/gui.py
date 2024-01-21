@@ -284,7 +284,7 @@ class Piece:
 
         cur_board.piece_map[new_square] = self
         del cur_board.piece_map[old_square]
-       
+        
         cur_board.piece_map[new_square].rect.topleft = cur_board.game.get_cords_from_index(new_square) 
 
         self.square = self.get_square_index()
@@ -400,7 +400,6 @@ class Pawn(Piece):
                 case _:
                     print('Invalid Glyph')
                     has_valid_glyph = False
-        print(f"after promotion: {self}")
 
 
     def get_legal_moves(self) -> list[Move]:
@@ -732,8 +731,8 @@ class Board:
         
         new_en_passent_target = self.en_passent_target
 
-        new_piece_map[start_square].promote()
         new_piece_map[start_square].move_to(end_square) 
+        new_piece_map[end_square].promote()
 
         piece_map_board_input = self.piece_map_to_board_input(new_piece_map)
 
