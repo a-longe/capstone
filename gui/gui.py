@@ -147,36 +147,12 @@ def on_mouse_up(game) -> None:
     piece = game.get_current_board().get_clicked_piece()
     if piece == -1: return # would like to make this nicer but will get back to it later
     start_square = piece.square
-    end_square = mouse_square = game.get_square_index(*pg.mouse.get_pos())
+    end_square = game.get_square_index(*pg.mouse.get_pos())
     piece.snap_to_square()
     piece.click = False
-    match game.get_current_board().eval_move(piece, mouse_square):
-        case MoveEvalResponces.INVALID_MOVE:
-            piece.return_to_previous()
-            return
-        case MoveEvalResponces.MOVE_TO_EMPTY:
-            new_board = cur_board.get_board_after_halfmove((start_square,
-                                                              end_square))
-        case MoveEvalResponces.CAPTURE_MOVE:
-            if type(cur_board.piece_map[end_square]) == King: game.is_game_over = True
-            new_board = cur_board.get_board_after_capture((start_square,
-                                                           end_square))
-        case MoveEvalResponces.CASTLE_KINGSIDE:
-            new_board = cur_board.get_board_after_castle_kingside((start_square,
-                                                                   end_square))
-            
-        case MoveEvalResponces.CASTLE_QUEENSIDE:
-            new_board = cur_board.get_board_after_castle_queenside((start_square,
-                                                               end_square))
-        case MoveEvalResponces.EN_PASSENT:
-            new_board = cur_board.get_board_after_en_passent((start_square,
-                                                               end_square))
-        case MoveEvalResponces.DOUBLE_PUSH:
-            new_board = cur_board.get_board_after_double_push((start_square,
-                                                               end_square))
-        case MoveEvalResponces.PROMOTION:
-            new_board = cur_board.get_board_after_promotion((start_square,
-                                                             end_square))
+
+    new_board = cur_board.get_board_after_move(piece, start_square, end_square)
+
     game.add_board(new_board)
     print(game.get_current_board().get_fen())
     pprint(cur_board.piece_map)
@@ -384,7 +360,7 @@ class Pawn(Piece):
                     self.board.piece_map[self.square] = Knight(self.board, self.rect, glyph)
                 case 'r' | 'R':
                     self.board.piece_map[self.square] = Rook(self.board, self.rect, glyph)
-                case 'b' | 'R':
+                case 'b' | 'B':
                     self.board.piece_map[self.square] = Bishop(self.board, self.rect, glyph)
                 case _:
                     print('Invalid Glyph')
@@ -733,8 +709,8 @@ class Board:
         
         new_en_passent_target = self.en_passent_target
 
-        new_piece_map[start_square].promote()
         new_piece_map[start_square].move_to(end_square) 
+        new_piece_map[end_square].promote()
 
         piece_map_board_input = self.piece_map_to_board_input(new_piece_map)
 
@@ -747,7 +723,7 @@ class Board:
                      new_halfmove_count, self.castling_rights,
                      new_en_passent_target)
 
-    def get_board_after_move(self, start_square:int, end_square:int) -> 'Board':
+    def get_board_after_move(self, piece:Piece, start_square:int, end_square:int) -> 'Board':
         piece = self.piece_map[start_square]
         move_evalutation = self.eval_move(piece, end_square)
         print(f"move_eval: {move_evalutation}")
@@ -761,9 +737,9 @@ class Board:
                                                               end_square))
 
             case MoveEvalResponces.CAPTURE_MOVE:
-                if type(self.piece_map[end_square]) == King: game.is_game_over = True
+                if type(self.piece_map[end_square]) == King: self.game.is_game_over = True
                 new_board = self.get_board_after_capture((start_square,
-                                                           end_square))
+                                                          end_square))
 
             case MoveEvalResponces.CASTLE_KINGSIDE:
                 new_board = self.get_board_after_castle_kingside((start_square,
