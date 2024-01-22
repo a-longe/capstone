@@ -273,6 +273,10 @@ class Piece:
 
         cur_board.piece_map[new_square] = self
         del cur_board.piece_map[old_square]
+<<<<<<< HEAD
+=======
+       
+>>>>>>> parent of 3b5d9e9 (promotion working)
         cur_board.piece_map[new_square].rect.topleft = cur_board.game.get_cords_from_index(new_square) 
 
         self.square = self.get_square_index()
