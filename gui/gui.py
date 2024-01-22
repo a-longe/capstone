@@ -142,24 +142,45 @@ def on_mouse_down(game):
             piece.previous_center = piece.rect.center
             piece.click = True
 
-
 def on_mouse_up(game) -> None:
     cur_board = game.get_current_board()
     piece = game.get_current_board().get_clicked_piece()
     if piece == -1: return # would like to make this nicer but will get back to it later
     start_square = piece.square
-
     end_square = mouse_square = game.get_square_index(*pg.mouse.get_pos())
-
     piece.snap_to_square()
     piece.click = False
-
-    new_board = cur_board.get_board_after_move(start_square, end_square)
-    print(new_board)    
-
+    match game.get_current_board().eval_move(piece, mouse_square):
+        case MoveEvalResponces.INVALID_MOVE:
+            piece.return_to_previous()
+            return
+        case MoveEvalResponces.MOVE_TO_EMPTY:
+            new_board = cur_board.get_board_after_halfmove((start_square,
+                                                              end_square))
+        case MoveEvalResponces.CAPTURE_MOVE:
+            if type(cur_board.piece_map[end_square]) == King: game.is_game_over = True
+            new_board = cur_board.get_board_after_capture((start_square,
+                                                           end_square))
+        case MoveEvalResponces.CASTLE_KINGSIDE:
+            new_board = cur_board.get_board_after_castle_kingside((start_square,
+                                                                   end_square))
+            
+        case MoveEvalResponces.CASTLE_QUEENSIDE:
+            new_board = cur_board.get_board_after_castle_queenside((start_square,
+                                                               end_square))
+        case MoveEvalResponces.EN_PASSENT:
+            new_board = cur_board.get_board_after_en_passent((start_square,
+                                                               end_square))
+        case MoveEvalResponces.DOUBLE_PUSH:
+            new_board = cur_board.get_board_after_double_push((start_square,
+                                                               end_square))
+        case MoveEvalResponces.PROMOTION:
+            new_board = cur_board.get_board_after_promotion((start_square,
+                                                             end_square))
     game.add_board(new_board)
     print(game.get_current_board().get_fen())
     pprint(cur_board.piece_map)
+
 
 def fen_to_pieces(fen, game) -> PiecePositionInput:
     lo_pieces = []
@@ -252,6 +273,7 @@ class Piece:
 
         cur_board.piece_map[new_square] = self
         del cur_board.piece_map[old_square]
+        cur_board.piece_map[new_square].rect.topleft = cur_board.game.get_cords_from_index(new_square) 
 
         self.square = self.get_square_index()
 
@@ -366,6 +388,7 @@ class Pawn(Piece):
                 case _:
                     print('Invalid Glyph')
                     has_valid_glyph = False
+        print(f"after promotion: {self}")
 
 
     def get_legal_moves(self) -> list[Move]:
@@ -710,8 +733,8 @@ class Board:
         
         new_en_passent_target = self.en_passent_target
 
+        new_piece_map[start_square].promote()
         new_piece_map[start_square].move_to(end_square) 
-        new_piece_map[end_square].promote()
 
         piece_map_board_input = self.piece_map_to_board_input(new_piece_map)
 
