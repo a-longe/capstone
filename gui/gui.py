@@ -254,7 +254,7 @@ class Piece:
 
         self.square = self.get_square_index()
 
-    def get_legal_moves(self) -> list[Move]:
+    def get_valid_moves(self) -> list[Move]:
         print("ERROR: This piece has not been classified past being a piece")
         return [(self.square, self.square)]
 
@@ -270,51 +270,51 @@ class Bishop(Piece):
         Piece.__init__(self, board, rect, glyph)
 
 
-    def get_legal_moves(self) -> list[Move]:
+    def get_valid_moves(self) -> list[Move]:
         OFFSETS = ((-1, -1) ,(-1, 1), (1, 1), (1, -1))
         valid_moves = []
         for offset in OFFSETS:
             valid_moves += self.board.get_sliding_moves(self.square, offset)
-        return [valid_move for valid_move in valid_moves if not self.board.does_move_attack_king(not self.is_white, valid_move)]
+        return [valid_move for valid_move in valid_moves]
 
 class Rook(Piece):
     def __init__(self, board, rect, glyph) -> None:
         Piece.__init__(self, board, rect, glyph)
 
 
-    def get_legal_moves(self) -> list[Move]:
+    def get_valid_moves(self) -> list[Move]:
         OFFSETS = ((1, 0) ,(-1, 0), (0, 1), (0, -1))
         valid_moves = []
         for offset in OFFSETS:
             valid_moves += self.board.get_sliding_moves(self.square, offset)
-        return [valid_move for valid_move in valid_moves if not self.board.does_move_attack_king(not self.is_white, valid_move)]
+        return [valid_move for valid_move in valid_moves]
 
 class Queen(Piece):
     def __init__(self, board, rect, glyph) -> None:
         Piece.__init__(self, board, rect, glyph)
 
-    def get_legal_moves(self) -> list[Move]:
+    def get_valid_moves(self) -> list[Move]:
         OFFSETS = ((-1, -1) ,(-1, 1), (1, 1), (1, -1), (1, 0) ,(-1, 0), (0, 1), (0, -1))
         valid_moves = []
         for offset in OFFSETS:
             valid_moves += self.board.get_sliding_moves(self.square, offset)
-        return [valid_move for valid_move in valid_moves if not self.board.does_move_attack_king(not self.is_white, valid_move)]
+        return [valid_move for valid_move in valid_moves]
 
 class Knight(Piece):
     def __init__(self, board, rect, glyph) -> None:
         Piece.__init__(self, board, rect, glyph)
 
-    def get_legal_moves(self) -> list[Move]:
+    def get_valid_moves(self) -> list[Move]:
         OFFSETS = ((-2, -1), (-2, 1), (-1, -2), (-1, 2), \
                     (1, -2), (1, 2), (2, -1), (2, 1))
         valid_moves =  self.board.get_jumping_moves(self.square, OFFSETS)
-        return [valid_move for valid_move in valid_moves if not self.board.does_move_attack_king(not self.is_white, valid_move)]
+        return [valid_move for valid_move in valid_moves]
 
 class King(Piece):
     def __init__(self, board, rect, glyph) -> None:
         Piece.__init__(self, board, rect, glyph)
 
-    def get_legal_moves(self) -> list[Move]:
+    def get_valid_moves(self) -> list[Move]:
         valid_moves = []
         OFFSETS = ((-1, -1), (-1, 0), (-1, 1), (0, -1), \
                     (0, 1), (1, -1), (1, 0), (1, 1))
@@ -341,7 +341,7 @@ class King(Piece):
                 elif castling_right.lower() == 'q':
                     valid_moves += castling_queenside_moves
 
-        return [valid_move for valid_move in valid_moves if not self.board.does_move_attack_king(not self.is_white, valid_move)]
+        return [valid_move for valid_move in valid_moves]
 
 class Pawn(Piece):
     def __init__(self, board, rect, glyph) -> None:
@@ -368,7 +368,7 @@ class Pawn(Piece):
         print(f"after promotion: {self}")
 
 
-    def get_legal_moves(self) -> list[Move]:
+    def get_valid_moves(self) -> list[Move]:
         valid_moves = []
         direction = -1 if self.is_white else 1
         move_offsets = [(1*direction, 0)]
@@ -395,7 +395,7 @@ class Pawn(Piece):
             if new_sqr not in self.board.piece_map.keys():
                 # no piece at new square
                 valid_moves.append((self.square, new_sqr))
-        return [valid_move for valid_move in valid_moves if not self.board.does_move_attack_king(not self.is_white, valid_move)]
+        return [valid_move for valid_move in valid_moves]
 
 
 class Board:
@@ -432,23 +432,45 @@ class Board:
         self.en_passent_target = en_passent_target
         self.legal_moves_map = {}
 
-    def does_move_attack_king(self, is_king_white:bool, move:Move) -> bool:
-        glyph_to_find = 'K' if is_king_white else 'k'
-        king_square = filter(lambda p : p.glyph == glyph_to_find,
-                             self.get_pieces())
-        return move[1] == king_square
+    def does_move_create_check(self, is_check_on_white:bool, move:Move) -> bool:
+        '''
+        NOTES
+        need to check if there are any legal moves after a move that will
+        threaten the king,
+        the issue is that to find any legal moves, we need to call this
+        function.
+
+        To try and fix this, I will do some reaserch on the chess programming
+        wiki.
+
+        Upon Further thinking, the simplest way I can think of is to find the
+        board after a move, and check for VALID moves as we only need to
+        check if they can move there, not put their own king in check
+        '''
+        # return False
+        board_after = self.get_board_after_move(self.piece_map[move[0]],
+                                                *move)
+        glyph_to_find = 'k' if is_check_on_white else 'K'
+        king_square = [piece for piece in board_after.get_pieces() if piece.glyph == glyph_to_find][0].square
+        valid_targets = [move[1] for move in board_after.get_all_valid_moves()]
+        return king_square in valid_targets
+        
+
+
+    def convert_valid_to_legal(self, lo_moves:list[Move]) -> list[Move]:
+        return [valid_move for valid_move in lo_moves if not self.does_move_create_check(self.is_white_turn, valid_move)]
 
     def get_all_valid_moves(self) -> list[Move]:
         valid_moves = []
         for piece in self.get_pieces():
-            valid_moves += piece.get_legal_moves()
+            valid_moves += piece.get_valid_moves()
         return valid_moves
 
     def eval_move(self, piece, new_square) -> int:
         # if valid location and is legal move()
         move = (piece.square, new_square)
         is_valid = self.game.mouse_inside_bounds() and \
-                   new_square in [move[1] for move in piece.get_legal_moves()]
+                   new_square in [move[1] for move in piece.get_valid_moves()]
 
         if is_valid:
             if self.is_move_castling(move):
@@ -945,7 +967,7 @@ class Game:
         if piece == -1: return
 
         if piece.square not in piece.board.legal_moves_map:
-            legal_squares = [move[1] for move in piece.get_legal_moves()]
+            legal_squares = [move[1] for move in piece.get_valid_moves()]
             piece.board.legal_moves_map[piece.square] = legal_squares
         else:
             legal_squares = piece.board.legal_moves_map[piece.square]
@@ -994,7 +1016,7 @@ get_random_fen(),
 '8/3pp3/8/8/8/8/3PP3/8 b - - 0 1',
 'r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1',
 '8/3P4/8/8/8/8/4p3/8 w - - 0 1',
-'8/4k3/4r3/8/8/3R4/3K4/8 w - - 0 1'
+'8/R2rk3/8/8/8/3R4/3K4/8 w - - 0 1'
 ]
 
 """
