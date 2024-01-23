@@ -432,9 +432,18 @@ class Board:
         self.en_passent_target = en_passent_target
         self.legal_moves_map = {}
 
+    def print(self) -> None:
+        for square_index in range(64):
+            try:
+                glyph = self.piece_map[square_index].glyph
+            except KeyError:
+                glyph = '-'
+            # hacky workaround pythons f-str
+            nl = "\n"
+            print(f"{glyph}{nl if (square_index+1)%8 == 0 else ' '}", end='')
+
     def does_move_create_check(self, is_check_on_white:bool, move:Move) -> bool:
         '''
-        NOTES
         need to check if there are any legal moves after a move that will
         threaten the king,
         the issue is that to find any legal moves, we need to call this
@@ -446,10 +455,20 @@ class Board:
         Upon Further thinking, the simplest way I can think of is to find the
         board after a move, and check for VALID moves as we only need to
         check if they can move there, not put their own king in check
+
+        Now we've run into another recursive issue with this function where to
+        check if a move is creates a check we need to get the board after a 
+        move but to do that we need to evaluate what kind of move it is, but 
+        to evaluate what kind of move it is, specifically if that move is 
+        allowed we're checking if a move creates a check again
+
+        So to fix this we need to reevaluate how to check if a king is in check
         '''
         # return False
-        board_after = self.get_board_after_move(self.piece_map[move[0]],
-                                                *move)
+        pprint(self.piece_map)
+        print(move)
+        piece = self.piece_map[move[0]]
+        board_after = self.get_board_after_move(piece, *move)
         glyph_to_find = 'k' if is_check_on_white else 'K'
         king_square = [piece for piece in board_after.get_pieces() if piece.glyph == glyph_to_find][0].square
         valid_targets = [move[1] for move in board_after.get_all_valid_moves()]
@@ -863,7 +882,7 @@ class Board:
         return self.piece_map.values()
 
 
-    def switch_is_white_turn(self) -> str:
+    def switch_is_white_turn(self) -> bool:
         return not self.is_white_turn
 
 
@@ -963,14 +982,12 @@ class Game:
         self.surface.fill(0)
 
     def display_blue_squares(self) -> None:
-        piece = self.get_current_board().get_clicked_piece()
+        board = self.get_current_board()
+        piece = board.get_clicked_piece()
         if piece == -1: return
-
-        if piece.square not in piece.board.legal_moves_map:
-            legal_squares = [move[1] for move in piece.get_valid_moves()]
-            piece.board.legal_moves_map[piece.square] = legal_squares
-        else:
-            legal_squares = piece.board.legal_moves_map[piece.square]
+    
+        legal_squares = [move[1] for move in piece.get_valid_moves()]
+        
         make_squares_blue(self.surface, self.square_size, legal_squares)
 
     def update_game(self) -> None:
@@ -982,7 +999,7 @@ class Game:
 
 # the main loop needs to call an event loop to establish an interactive game
 # and needs to call the game to update itself
-def main(cur_game:Game) -> None:
+def main(game:Game) -> None:
     game_event_loop(game)
     game.update_game()
 
