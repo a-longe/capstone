@@ -3,7 +3,7 @@ import os
 import sys
 import math
 from random import randint
-from pprint import pprint
+from pprint import pprint, pformat
 
 sys.path.insert(0, "/home/alonge/Documents/code/capstone/python-chess")
 import uci_handler as engine
@@ -137,25 +137,28 @@ def on_mouse_down(game):
         # The event positions is the mouse coordinates
         if piece.rect.collidepoint(pg.mouse.get_pos()) and \
            piece.can_pickup():
-            print(piece)
+            print(f'from on_mouse_down {piece}')
             # store current center
             piece.previous_center = piece.rect.center
             piece.click = True
 
 def on_mouse_up(game) -> None:
-    cur_board = game.get_current_board()
+    cur_board:Board = game.get_current_board()
     piece = game.get_current_board().get_clicked_piece()
     if piece == -1: return # would like to make this nicer but will get back to it later
     start_square = piece.square
     end_square = game.get_square_index(*pg.mouse.get_pos())
-    piece.snap_to_square()
-    piece.click = False
+
+
+    if (start_square, end_square) not in cur_board.piece_map[start_square].get_valid_moves():
+        return
 
     new_board = cur_board.get_board_after_move(piece, start_square, end_square)
+    if new_board == -1: return
 
     game.add_board(new_board)
     print(game.get_current_board().get_fen())
-    pprint(cur_board.piece_map)
+    cur_board.print()
 
 
 def fen_to_pieces(fen, game) -> PiecePositionInput:
@@ -245,7 +248,7 @@ class Piece:
         old_square = self.square
         move = (old_square, new_square)
 
-        print(move)
+        print(f'from move_to {move}')
 
         cur_board.piece_map[new_square] = self
         del cur_board.piece_map[old_square]
@@ -442,7 +445,14 @@ class Board:
             nl = "\n"
             print(f"{glyph}{nl if (square_index+1)%8 == 0 else ' '}", end='')
 
-    def does_move_create_check(self, is_check_on_white:bool, move:Move) -> bool:
+    def is_in_check(self, is_check_on_white:bool) -> bool:
+        glyph_to_find = 'K' if is_check_on_white else 'k'
+        king_square = [piece for piece in board_after.get_pieces() if piece.glyph == glyph_to_find][0].square
+        valid_targets = [move[1] for move in board_after.get_all_valid_moves()]
+        return king_square in valid_targets
+
+
+    def does_move_create_check(self, is_check_on_white:bool, piece:Piece, move:Move) -> bool:
         '''
         need to check if there are any legal moves after a move that will
         threaten the king,
@@ -465,19 +475,16 @@ class Board:
         So to fix this we need to reevaluate how to check if a king is in check
         '''
         # return False
-        pprint(self.piece_map)
-        print(move)
-        piece = self.piece_map[move[0]]
-        board_after = self.get_board_after_move(piece, *move)
-        glyph_to_find = 'k' if is_check_on_white else 'K'
+        print(f'from does_move_attack_king{move}')
+        print(f'from does_move_attack_king{pformat(self.piece_map)}')
+        board_after = self.get_board_after_move(piece, *move, True)
+        glyph_to_find = 'K' if is_check_on_white else 'k'
         king_square = [piece for piece in board_after.get_pieces() if piece.glyph == glyph_to_find][0].square
         valid_targets = [move[1] for move in board_after.get_all_valid_moves()]
         return king_square in valid_targets
         
-
-
     def convert_valid_to_legal(self, lo_moves:list[Move]) -> list[Move]:
-        return [valid_move for valid_move in lo_moves if not self.does_move_create_check(self.is_white_turn, valid_move)]
+        return [valid_move for valid_move in lo_moves if not self.does_move_create_check(self.is_white_turn, self.piece_map[MOVE_START], valid_move)]
 
     def get_all_valid_moves(self) -> list[Move]:
         valid_moves = []
@@ -485,11 +492,25 @@ class Board:
             valid_moves += piece.get_valid_moves()
         return valid_moves
 
-    def eval_move(self, piece, new_square) -> int:
-        # if valid location and is legal move()
+    def eval_move(self, piece:'Piece', new_square:int, search_only_valid=False) -> int:
+        '''
+        Fix function to make it cleaner, one flow of execution, one return statement 
+        match case?
+
+        Create new board repr to check if board is in check
+        '''
         move = (piece.square, new_square)
+        
+        
         is_valid = self.game.mouse_inside_bounds() and \
-                   new_square in [move[1] for move in piece.get_valid_moves()]
+                new_square in [move[1] for move in piece.get_valid_moves()]
+
+        if not search_only_valid:
+            # must search legal moves as well
+            is_valid = is_valid and \
+                    new_square in [move[1] for move in piece.get_valid_moves() if \
+                    self.does_move_create_check(self.is_white_turn, piece, move)]
+
 
         if is_valid:
             if self.is_move_castling(move):
@@ -764,14 +785,14 @@ class Board:
                      new_halfmove_count, self.castling_rights,
                      new_en_passent_target)
 
-    def get_board_after_move(self, piece:Piece, start_square:int, end_square:int) -> 'Board':
+    def get_board_after_move(self, piece:Piece, start_square:int, end_square:int, search_only_valid=False) -> 'Board':
         piece = self.piece_map[start_square]
-        move_evalutation = self.eval_move(piece, end_square)
-        print(f"move_eval: {move_evalutation}")
+        move_evalutation = self.eval_move(piece, end_square, search_only_valid)
+        # print(f"move_eval: {move_evalutation}")
         match move_evalutation:
             case MoveEvalResponces.INVALID_MOVE:
                 piece.return_to_previous()
-                return
+                new_board = -1
 
             case MoveEvalResponces.MOVE_TO_EMPTY:
                 new_board = self.get_board_after_halfmove((start_square,
@@ -803,6 +824,8 @@ class Board:
                                                              end_square))
             case _:
                 print('error with eval move')
+                new_board = -1
+
         return new_board
 
     def get_clicked_piece(self) -> Piece:
@@ -1033,7 +1056,7 @@ get_random_fen(),
 '8/3pp3/8/8/8/8/3PP3/8 b - - 0 1',
 'r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1',
 '8/3P4/8/8/8/8/4p3/8 w - - 0 1',
-'8/R2rk3/8/8/8/3R4/3K4/8 w - - 0 1'
+'8/R3k3/7b/8/8/3R4/3K4/8 w - - 0 1'
 ]
 
 """
