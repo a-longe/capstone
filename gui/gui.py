@@ -452,7 +452,6 @@ class Board:
             print(f"{glyph}{nl if (square_index+1)%8 == 0 else ' '}", end='')
 
     def does_move_create_check(self, is_king_white:bool, move:Move) -> bool:
-        return False
         piece = self.piece_map[move[MOVE_START]]
         print(f"does_move... piece: {piece}")
         board_after = self.get_board_after_move(piece, *move)
