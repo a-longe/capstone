@@ -18,7 +18,7 @@ PIECE_GLYPH = 3
 DIVMOD_ROW = 0
 DIVMOD_COLUMN = 1
 
-BoardFenInput = tuple[list[PiecePositionInput], bool, int, int, dict[str:bool], int]
+BoardFenInput = tuple[list[PiecePositionInput], bool, int, int, dict[str,bool], int]
 
 STARTING_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
@@ -158,7 +158,7 @@ def on_mouse_up(game) -> None:
 
     new_board = cur_board.get_board_after_move(piece, start_square, end_square)
     # check for invalid move
-    if new_board == -1: 
+    if new_board == -1 or move not in piece.get_valid_moves(): 
         return
 
     game.add_board(new_board)
@@ -284,7 +284,7 @@ class Bishop(Piece):
         valid_moves = []
         for offset in OFFSETS:
             valid_moves += self.board.get_sliding_moves(self.square, offset)
-        return [valid_move for valid_move in valid_moves if not self.board.does_move_create_check(not self.is_white, valid_move)]
+        return valid_moves
 
 class Rook(Piece):
     def __init__(self, board, rect, glyph) -> None:
@@ -296,7 +296,8 @@ class Rook(Piece):
         valid_moves = []
         for offset in OFFSETS:
             valid_moves += self.board.get_sliding_moves(self.square, offset)
-        return [valid_move for valid_move in valid_moves if not self.board.does_move_create_check(not self.is_white, valid_move)]
+        return valid_moves
+
 
 class Queen(Piece):
     def __init__(self, board, rect, glyph) -> None:
@@ -307,7 +308,7 @@ class Queen(Piece):
         valid_moves = []
         for offset in OFFSETS:
             valid_moves += self.board.get_sliding_moves(self.square, offset)
-        return [valid_move for valid_move in valid_moves if not self.board.does_move_create_check(not self.is_white, valid_move)]
+        return valid_moves
 
 class Knight(Piece):
     def __init__(self, board, rect, glyph) -> None:
@@ -317,7 +318,7 @@ class Knight(Piece):
         OFFSETS = ((-2, -1), (-2, 1), (-1, -2), (-1, 2), \
                     (1, -2), (1, 2), (2, -1), (2, 1))
         valid_moves =  self.board.get_jumping_moves(self.square, OFFSETS)
-        return [valid_move for valid_move in valid_moves if not self.board.does_move_create_check(not self.is_white, valid_move)]
+        return valid_moves
 
 class King(Piece):
     def __init__(self, board, rect, glyph) -> None:
@@ -350,7 +351,7 @@ class King(Piece):
                 elif castling_right.lower() == 'q':
                     valid_moves += castling_queenside_moves
 
-        return [valid_move for valid_move in valid_moves if not self.board.does_move_create_check(not self.is_white, valid_move)]
+        return valid_moves
 
 class Pawn(Piece):
     def __init__(self, board, rect, glyph) -> None:
@@ -404,8 +405,7 @@ class Pawn(Piece):
             if new_sqr not in self.board.piece_map.keys():
                 # no piece at new square
                 valid_moves.append((self.square, new_sqr))
-        return [valid_move for valid_move in valid_moves if not self.board.does_move_create_check(not self.is_white, valid_move)]
-
+        return valid_moves
 
 class Board:
     def __init__(self, game, piece_positions:list[PiecePositionInput],
@@ -452,6 +452,7 @@ class Board:
             print(f"{glyph}{nl if (square_index+1)%8 == 0 else ' '}", end='')
 
     def does_move_create_check(self, is_king_white:bool, move:Move) -> bool:
+        return False
         piece = self.piece_map[move[MOVE_START]]
         print(f"does_move... piece: {piece}")
         board_after = self.get_board_after_move(piece, *move)
@@ -759,7 +760,7 @@ class Board:
         match move_evalutation:
             case MoveEvalResponces.INVALID_MOVE:
                 piece.return_to_previous()
-                return -1
+                new_board = -1
 
             case MoveEvalResponces.MOVE_TO_EMPTY:
                 new_board = self.get_board_after_halfmove((start_square,
@@ -902,7 +903,7 @@ class Game:
         self.white_time = min_to_sec(5)
         self.black_time = min_to_sec(5)
         self.is_game_over = False
-        self.display_blue = True
+        self.display_blue = False
         """
         Note:
         Used to have is_white_turn and move_count in this init but because
@@ -972,12 +973,8 @@ class Game:
     def display_blue_squares(self) -> None:
         piece = self.get_current_board().get_clicked_piece()
         if piece == -1: return
-
-        if piece.square not in piece.board.legal_moves_map:
-            legal_squares = [move[1] for move in piece.get_valid_moves()]
-            piece.board.legal_moves_map[piece.square] = legal_squares
-        else:
-            legal_squares = piece.board.legal_moves_map[piece.square]
+        legal_squares = [move[1] for move in piece.get_valid_moves()]
+        piece.board.legal_moves_map[piece.square] = legal_squares
         make_squares_blue(self.surface, self.square_size, legal_squares)
 
     def update_game(self) -> None:
