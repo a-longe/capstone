@@ -44,7 +44,7 @@ INT_TO_LETTER = {
 }
 
 class MoveEvalResponces:
-    INVALID_MOVE = 0
+    INVALID_MOVE = -1
     MOVE_TO_EMPTY = 1
     CAPTURE_MOVE = 2
     CASTLE_KINGSIDE = 3
@@ -144,7 +144,7 @@ def on_mouse_down(game):
 
 def on_mouse_up(game) -> None:
     cur_board = game.get_current_board()
-    piece = game.get_current_board().get_clicked_piece()
+    piece = cur_board.get_clicked_piece()
     if piece == -1: return # would like to make this nicer but will get back to it later
     start_square = piece.square
     end_square = game.get_square_index(*pg.mouse.get_pos())
@@ -152,9 +152,13 @@ def on_mouse_up(game) -> None:
     piece.click = False
 
     new_board = cur_board.get_board_after_move(piece, start_square, end_square)
-
+    if new_board == -1 or new_board.is_in_check(True):
+        piece.return_to_previous()
+        return
+    
+    print(new_board.is_in_check(True), new_board.is_in_check(False))
     game.add_board(new_board)
-    print(game.get_current_board().get_fen())
+    print(new_board.get_fen())
     pprint(cur_board.piece_map)
 
 
@@ -466,15 +470,19 @@ class Board:
         '''
         # return False
         pprint(self.piece_map)
-        print(move)
-        piece = self.piece_map[move[0]]
+        piece = self.piece_map[move[MOVE_START]]
         board_after = self.get_board_after_move(piece, *move)
-        glyph_to_find = 'k' if is_check_on_white else 'K'
-        king_square = [piece for piece in board_after.get_pieces() if piece.glyph == glyph_to_find][0].square
-        valid_targets = [move[1] for move in board_after.get_all_valid_moves()]
-        return king_square in valid_targets
-        
+        #glyph_to_find = 'k' if is_check_on_white else 'K'
+        #king_square = [piece for piece in board_after.get_pieces() if piece.glyph == glyph_to_find][0].square
+        #valid_targets = [move[1] for move in board_after.get_all_valid_moves()]
+        #return king_square in valid_targets
+        return False
 
+    def is_in_check(self, is_check_on_white:bool) -> bool:
+        glyph_to_find = 'k' if is_check_on_white else 'K'
+        king_square = [piece for piece in self.get_pieces() if piece.glyph == glyph_to_find][0].square
+        valid_targets = [move[1] for move in self.get_all_valid_moves() if self.piece_map[move[MOVE_START]].is_white == is_check_on_white]
+        return king_square in valid_targets
 
     def convert_valid_to_legal(self, lo_moves:list[Move]) -> list[Move]:
         return [valid_move for valid_move in lo_moves if not self.does_move_create_check(self.is_white_turn, valid_move)]
@@ -765,13 +773,13 @@ class Board:
                      new_en_passent_target)
 
     def get_board_after_move(self, piece:Piece, start_square:int, end_square:int) -> 'Board':
-        piece = self.piece_map[start_square]
         move_evalutation = self.eval_move(piece, end_square)
+        print('**********')
         print(f"move_eval: {move_evalutation}")
         match move_evalutation:
             case MoveEvalResponces.INVALID_MOVE:
                 piece.return_to_previous()
-                return
+                new_board = -1
 
             case MoveEvalResponces.MOVE_TO_EMPTY:
                 new_board = self.get_board_after_halfmove((start_square,
