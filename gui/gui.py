@@ -44,7 +44,7 @@ INT_TO_LETTER = {
 }
 
 class MoveEvalResponces:
-    INVALID_MOVE = 0
+    INVALID_MOVE = -1
     MOVE_TO_EMPTY = 1
     CAPTURE_MOVE = 2
     CASTLE_KINGSIDE = 3
@@ -144,7 +144,7 @@ def on_mouse_down(game):
 
 def on_mouse_up(game) -> None:
     cur_board = game.get_current_board()
-    piece = game.get_current_board().get_clicked_piece()
+    piece = cur_board.get_clicked_piece()
     if piece == -1: return # would like to make this nicer but will get back to it later
     start_square = piece.square
     end_square = game.get_square_index(*pg.mouse.get_pos())
@@ -157,15 +157,14 @@ def on_mouse_up(game) -> None:
     """
 
     new_board = cur_board.get_board_after_move(piece, start_square, end_square)
-    # check for invalid move
-    if new_board == -1 or move not in piece.get_valid_moves(): 
+    if new_board == -1 or new_board.is_in_check(True):
+        piece.return_to_previous()
         return
-
+    
+    print(new_board.is_in_check(True), new_board.is_in_check(False))
     game.add_board(new_board)
-    print(game.get_current_board().get_fen())
-    print(f"is_in_check? white: {new_board.is_in_check(True)} black: {new_board.is_in_check(False)}")
-    cur_board.print()
-
+    print(new_board.get_fen())
+    pprint(cur_board.piece_map)
 
 def fen_to_pieces(fen, game) -> PiecePositionInput:
     lo_pieces = []
@@ -297,7 +296,6 @@ class Rook(Piece):
         for offset in OFFSETS:
             valid_moves += self.board.get_sliding_moves(self.square, offset)
         return valid_moves
-
 
 class Queen(Piece):
     def __init__(self, board, rect, glyph) -> None:
@@ -451,17 +449,46 @@ class Board:
             nl = "\n"
             print(f"{glyph}{nl if (square_index+1)%8 == 0 else ' '}", end='')
 
-    def does_move_create_check(self, is_king_white:bool, move:Move) -> bool:
-        return False
-        piece = self.piece_map[move[MOVE_START]]
-        print(f"does_move... piece: {piece}")
-        board_after = self.get_board_after_move(piece, *move)
-        return board_after.is_in_check(is_king_white)
+    def does_move_create_check(self, is_check_on_white:bool, move:Move) -> bool:
+        '''
+        need to check if there are any legal moves after a move that will
+        threaten the king,
+        the issue is that to find any legal moves, we need to call this
+        function.
 
-    def is_in_check(self, is_king_white:bool) -> bool:
-        glyph_to_find = 'K' if is_king_white else 'k'
+        To try and fix this, I will do some reaserch on the chess programming
+        wiki.
+
+        Upon Further thinking, the simplest way I can think of is to find the
+        board after a move, and check for VALID moves as we only need to
+        check if they can move there, not put their own king in check
+
+        Now we've run into another recursive issue with this function where to
+        check if a move is creates a check we need to get the board after a 
+        move but to do that we need to evaluate what kind of move it is, but 
+        to evaluate what kind of move it is, specifically if that move is 
+        allowed we're checking if a move creates a check again
+
+        So to fix this we need to reevaluate how to check if a king is in check
+        '''
+        # return False
+        pprint(self.piece_map)
+        piece = self.piece_map[move[MOVE_START]]
+        board_after = self.get_board_after_move(piece, *move)
+        #glyph_to_find = 'k' if is_check_on_white else 'K'
+        #king_square = [piece for piece in board_after.get_pieces() if piece.glyph == glyph_to_find][0].square
+        #valid_targets = [move[1] for move in board_after.get_all_valid_moves()]
+        #return king_square in valid_targets
+        return False
+
+    def is_in_check(self, is_check_on_white:bool) -> bool:
+        glyph_to_find = 'k' if is_check_on_white else 'K'
         king_square = [piece for piece in self.get_pieces() if piece.glyph == glyph_to_find][0].square
-        return king_square in [move[MOVE_END] for move in self.get_all_valid_moves()]
+        valid_targets = [move[1] for move in self.get_all_valid_moves() if self.piece_map[move[MOVE_START]].is_white == is_check_on_white]
+        return king_square in valid_targets
+
+    def convert_valid_to_legal(self, lo_moves:list[Move]) -> list[Move]:
+        return [valid_move for valid_move in lo_moves if not self.does_move_create_check(self.is_white_turn, valid_move)]
 
     def get_all_valid_moves(self) -> list[Move]:
         valid_moves = []
@@ -472,9 +499,10 @@ class Board:
     def eval_move(self, piece, new_square) -> int:
         # if valid location and is legal move()
         move = (piece.square, new_square)
-        is_in_board = self.game.mouse_inside_bounds()
+        is_valid = self.game.mouse_inside_bounds() and \
+                   new_square in [move[1] for move in piece.get_valid_moves()]
 
-        if is_in_board:
+        if is_valid:
             if self.is_move_castling(move):
                 if self.is_castle_kingside(move):
                     return MoveEvalResponces.CASTLE_KINGSIDE
@@ -754,8 +782,8 @@ class Board:
                      new_en_passent_target)
 
     def get_board_after_move(self, piece:Piece, start_square:int, end_square:int) -> 'Board':
-        piece = self.piece_map[start_square]
         move_evalutation = self.eval_move(piece, end_square)
+        print('**********')
         print(f"move_eval: {move_evalutation}")
         match move_evalutation:
             case MoveEvalResponces.INVALID_MOVE:
@@ -871,7 +899,7 @@ class Board:
         return self.piece_map.values()
 
 
-    def switch_is_white_turn(self) -> str:
+    def switch_is_white_turn(self) -> bool:
         return not self.is_white_turn
 
 
@@ -971,10 +999,10 @@ class Game:
         self.surface.fill(0)
 
     def display_blue_squares(self) -> None:
-        piece = self.get_current_board().get_clicked_piece()
+        board = self.get_current_board()
+        piece = board.get_clicked_piece()
         if piece == -1: return
         legal_squares = [move[1] for move in piece.get_valid_moves()]
-        piece.board.legal_moves_map[piece.square] = legal_squares
         make_squares_blue(self.surface, self.square_size, legal_squares)
 
     def update_game(self) -> None:
@@ -986,7 +1014,7 @@ class Game:
 
 # the main loop needs to call an event loop to establish an interactive game
 # and needs to call the game to update itself
-def main(cur_game:Game) -> None:
+def main(game:Game) -> None:
     game_event_loop(game)
     game.update_game()
 
@@ -1020,7 +1048,7 @@ get_random_fen(),
 '8/3pp3/8/8/8/8/3PP3/8 b - - 0 1',
 'r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1',
 '8/3P4/8/8/8/8/4p3/8 w - - 0 1',
-'8/4k3/4r3/8/8/3R4/3K4/8 w - - 0 1'
+'8/R2rk3/8/8/8/3R4/3K4/8 w - - 0 1'
 ]
 
 """
