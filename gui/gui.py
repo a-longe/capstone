@@ -512,33 +512,26 @@ class Board:
         move = (piece.square, new_square)
         is_valid = self.game.mouse_inside_bounds() and piece.square != new_square and \
                     move in piece.get_valid_moves()
-
-        if is_valid:
-            if self.is_move_castling(move):
-                if self.is_castle_kingside(move):
-                    return MoveEvalResponces.CASTLE_KINGSIDE
-                else:
-                    return MoveEvalResponces.CASTLE_QUEENSIDE
-            elif self.is_move_en_passent(move): return MoveEvalResponces.EN_PASSENT
-            elif self.is_move_double_push(move): return MoveEvalResponces.DOUBLE_PUSH
-            elif self.is_move_promotion(move): return MoveEvalResponces.PROMOTION
-
-            # does piece collide with another piece
-            is_colliding = new_square in game.get_current_board().piece_map.keys()
-
-            if is_colliding:
-                piece_to_take = game.get_current_board().piece_map[new_square]
-                is_diff_colour = not piece.is_same_colour(piece_to_take)
-
-                if is_diff_colour:
-                    return MoveEvalResponces.CAPTURE_MOVE
-                else:
-                    return MoveEvalResponces.INVALID_MOVE
-            else:
-                return MoveEvalResponces.MOVE_TO_EMPTY
-        else:
+        if not is_valid:
             return MoveEvalResponces.INVALID_MOVE
 
+        if self.is_move_en_passent(move): return MoveEvalResponces.EN_PASSENT
+        elif self.is_move_double_push(move): return MoveEvalResponces.DOUBLE_PUSH
+        elif self.is_move_promotion(move): return MoveEvalResponces.PROMOTION
+        elif self.is_move_castling(move):
+            if self.is_castle_kingside(move):
+                return MoveEvalResponces.CASTLE_KINGSIDE
+            else:
+                return MoveEvalResponces.CASTLE_QUEENSIDE
+
+        if new_square in self.piece_map.keys():
+            piece_to_take = game.get_current_board().piece_map[new_square]
+            if not piece.is_same_colour(piece_to_take):
+                return MoveEvalResponces.CAPTURE_MOVE
+        else:
+            return MoveEvalResponces.MOVE_TO_EMPTY
+        return MoveEvalResponces.INVALID_MOVE
+        
     def piece_map_to_board_input(self, piece_map:dict[int, 'Piece']) -> PiecePositionInput:
         pieces = piece_map.values()
         return [(*piece.rect[:3], piece.glyph) for piece in pieces]
