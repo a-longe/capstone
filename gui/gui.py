@@ -137,11 +137,10 @@ def on_mouse_down(game):
         # The event positions is the mouse coordinates
         if piece.rect.collidepoint(pg.mouse.get_pos()) and \
            piece.can_pickup():
-            print(piece)
+            print(piece, list(move[MOVE_END] for move in piece.get_valid_moves()))
             # store current center
             piece.previous_center = piece.rect.center
             piece.click = True
-            print(list(move[MOVE_END] for move in piece.get_valid_moves()))
 
 def on_mouse_up(game) -> None:
     cur_board = game.get_current_board()
@@ -158,14 +157,24 @@ def on_mouse_up(game) -> None:
     """
 
     new_board = cur_board.get_board_after_move(piece, start_square, end_square)
-    if new_board == -1 or new_board.is_in_check(new_board.is_white_turn):
+    if new_board == -1:
+        piece.return_to_previous()
+        return
+
+    if new_board.is_in_check(new_board.is_white_turn):
+        print('not a legal move')
         piece.return_to_previous()
         return
     
-    print(new_board.is_in_check(True), new_board.is_in_check(False))
+    
+    sf_eval_dump = engine.call_stockfish([f"ucinewgame",
+                                            f"position fen {new_board.get_fen()}",
+                                            "eval"])
+    sf_eval = engine.get_last_line_with_prefix(sf_eval_dump, 'Final evaluation').split()[2]
+    print(f"current board: {sf_eval}")
     game.add_board(new_board)
     new_board.print()
-    print(new_board.get_fen())
+    print(new_board.get_fen(), end='\n')
     
 
 def fen_to_pieces(fen, game) -> PiecePositionInput:
@@ -334,8 +343,6 @@ class King(Piece):
 
         castling_kingside_moves = self.board.get_jumping_moves(self.square, CASTLING_KINGSIDE_OFFSET)
         castling_queenside_moves = self.board.get_jumping_moves(self.square, CASTLING_QUEENSIDE_OFFSET)
-
-        self.board.print()
 
         if self.square + 1 in self.board.piece_map or \
             self.square + 2 in self.board.piece_map:
@@ -1005,7 +1012,7 @@ class Game:
         board = self.get_current_board()
         piece = board.get_clicked_piece()
         if piece == -1: return
-        legal_squares = [move[1] for move in piece.get_valid_moves()]
+        legal_squares = [move[1] for move in piece.get_valid_moves() if board.get_board_after_move(piece, *move).is_in_check(board.is_white_turn)]
         make_squares_blue(self.surface, self.square_size, legal_squares)
 
     def update_game(self) -> None:
