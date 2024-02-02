@@ -141,6 +141,7 @@ def on_mouse_down(game):
             # store current center
             piece.previous_center = piece.rect.center
             piece.click = True
+            print(list(move[MOVE_END] for move in piece.get_valid_moves()))
 
 def on_mouse_up(game) -> None:
     cur_board = game.get_current_board()
@@ -157,14 +158,15 @@ def on_mouse_up(game) -> None:
     """
 
     new_board = cur_board.get_board_after_move(piece, start_square, end_square)
-    if new_board == -1 or new_board.is_in_check(True):
+    if new_board == -1 or new_board.is_in_check(new_board.is_white_turn):
         piece.return_to_previous()
         return
     
     print(new_board.is_in_check(True), new_board.is_in_check(False))
     game.add_board(new_board)
+    new_board.print()
     print(new_board.get_fen())
-    pprint(cur_board.piece_map)
+    
 
 def fen_to_pieces(fen, game) -> PiecePositionInput:
     lo_pieces = []
@@ -500,7 +502,7 @@ class Board:
         # if valid location and is legal move()
         move = (piece.square, new_square)
         is_valid = self.game.mouse_inside_bounds() and \
-                   new_square in [move[1] for move in piece.get_valid_moves()]
+                    piece.square != new_square
 
         if is_valid:
             if self.is_move_castling(move):
@@ -783,7 +785,6 @@ class Board:
 
     def get_board_after_move(self, piece:Piece, start_square:int, end_square:int) -> 'Board':
         move_evalutation = self.eval_move(piece, end_square)
-        print('**********')
         print(f"move_eval: {move_evalutation}")
         match move_evalutation:
             case MoveEvalResponces.INVALID_MOVE:
