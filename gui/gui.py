@@ -335,13 +335,7 @@ class King(Piece):
         castling_kingside_moves = self.board.get_jumping_moves(self.square, CASTLING_KINGSIDE_OFFSET)
         castling_queenside_moves = self.board.get_jumping_moves(self.square, CASTLING_QUEENSIDE_OFFSET)
 
-        c_r_to_check = ['K', 'Q'] if self.board.is_white_turn else ['k', 'q']
-        for castling_right in c_r_to_check:
-            if self.board.castling_rights[castling_right]:
-                if castling_right.lower() == 'k':
-                    valid_moves += castling_kingside_moves
-                elif castling_right.lower() == 'q':
-                    valid_moves += castling_queenside_moves
+        self.board.print()
 
         if self.square + 1 in self.board.piece_map or \
             self.square + 2 in self.board.piece_map:
@@ -350,6 +344,14 @@ class King(Piece):
             self.square - 2 in self.board.piece_map or \
             self.square - 3 in self.board.piece_map:
             castling_queenside_moves = []
+
+        c_r_to_check = ['K', 'Q'] if self.board.is_white_turn else ['k', 'q']
+        for castling_right in c_r_to_check:
+            if self.board.castling_rights[castling_right]:
+                if castling_right.lower() == 'k':
+                    valid_moves += castling_kingside_moves
+                elif castling_right.lower() == 'q':
+                    valid_moves += castling_queenside_moves
 
         return valid_moves
 
@@ -501,8 +503,8 @@ class Board:
     def eval_move(self, piece, new_square) -> int:
         # if valid location and is legal move()
         move = (piece.square, new_square)
-        is_valid = self.game.mouse_inside_bounds() and \
-                    piece.square != new_square
+        is_valid = self.game.mouse_inside_bounds() and piece.square != new_square and \
+                    move in piece.get_valid_moves()
 
         if is_valid:
             if self.is_move_castling(move):
