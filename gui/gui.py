@@ -335,14 +335,6 @@ class King(Piece):
         castling_kingside_moves = self.board.get_jumping_moves(self.square, CASTLING_KINGSIDE_OFFSET)
         castling_queenside_moves = self.board.get_jumping_moves(self.square, CASTLING_QUEENSIDE_OFFSET)
 
-        if self.square + 1 in self.board.piece_map or \
-            self.square + 2 in self.board.piece_map:
-            castling_kingside_moves = []
-        elif self.square - 1 in self.board.piece_map or \
-            self.square - 2 in self.board.piece_map or \
-            self.square - 3 in self.board.piece_map:
-            castling_queenside_moves = []
-
         c_r_to_check = ['K', 'Q'] if self.board.is_white_turn else ['k', 'q']
         for castling_right in c_r_to_check:
             if self.board.castling_rights[castling_right]:
@@ -350,6 +342,14 @@ class King(Piece):
                     valid_moves += castling_kingside_moves
                 elif castling_right.lower() == 'q':
                     valid_moves += castling_queenside_moves
+
+        if self.square + 1 in self.board.piece_map or \
+            self.square + 2 in self.board.piece_map:
+            castling_kingside_moves = []
+        elif self.square - 1 in self.board.piece_map or \
+            self.square - 2 in self.board.piece_map or \
+            self.square - 3 in self.board.piece_map:
+            castling_queenside_moves = []
 
         return valid_moves
 
