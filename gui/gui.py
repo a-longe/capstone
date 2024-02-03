@@ -174,7 +174,7 @@ def on_mouse_up(game) -> None:
     print(f"current board: {sf_eval}")
     game.add_board(new_board)
     new_board.print()
-    print(new_board.get_fen(), end='\n')
+    print(new_board.get_fen(), end='\n\n')
     
 
 def fen_to_pieces(fen, game) -> PiecePositionInput:
@@ -483,14 +483,9 @@ class Board:
         So to fix this we need to reevaluate how to check if a king is in check
         '''
         # return False
-        pprint(self.piece_map)
         piece = self.piece_map[move[MOVE_START]]
         board_after = self.get_board_after_move(piece, *move)
-        #glyph_to_find = 'k' if is_check_on_white else 'K'
-        #king_square = [piece for piece in board_after.get_pieces() if piece.glyph == glyph_to_find][0].square
-        #valid_targets = [move[1] for move in board_after.get_all_valid_moves()]
-        #return king_square in valid_targets
-        return False
+        return board_after.is_in_check(is_check_on_white)
 
     def is_in_check(self, is_check_on_white:bool) -> bool:
         glyph_to_find = 'k' if is_check_on_white else 'K'
@@ -1005,7 +1000,7 @@ class Game:
         board = self.get_current_board()
         piece = board.get_clicked_piece()
         if piece == -1: return
-        legal_squares = [move[1] for move in piece.get_valid_moves() if board.get_board_after_move(piece, *move).is_in_check(board.is_white_turn)]
+        legal_squares = [move[1] for move in piece.get_valid_moves() if board.does_move_create_check(board.is_white_turn, move)]
         make_squares_blue(self.surface, self.square_size, legal_squares)
 
     def update_game(self) -> None:
