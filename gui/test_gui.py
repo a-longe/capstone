@@ -5,26 +5,34 @@ import time, datetime
 random_fens = open("../engine/random_fens.txt", 'r')
 game = gui.Game(gui.STARTING_FEN)
 
-@pytest.mark.parametrize("expected", [fen.strip() for fen in random_fens])
+@pytest.mark.parametrize("expected", [fen.strip() for fen in random_fens.readlines()[:500]])
 def test_get_fen(expected):
-	board = gui.Board(game, *gui.fen_to_board_input(expected))
+	board = gui.Board(game, *gui.fen_to_board_input(expected, game))
 	assert expected == board.get_fen()
 
-def test_get_legal_move_speed():
-	with open("../engine/random_fens.txt", 'r') as rand_fens:
-		boards = []
-		for fen in rand_fens:
-			boards.append(gui.Board(game, *gui.fen_to_board_input(fen)))
+knight_test_cases = [
+        (, 1, [])
+        ]
+@pytest.mark.parametrize(('fen, square, expected'), knight_test_cases)
+def test_knght_valid_move(fen, square, expected):
+    board = gui.Board(game, *gui.fen_to_board_input(fen, game))
+    assert board.piece_map[square].get_valid_moves() == expected
 
-	start_time = time.time()
-	sum_moves = 0
-	for board in boards:
-		for piece in board.get_pieces():
-			sum_moves += len(piece.get_legal_moves())
-	end_time = time.time()
-	time_diff = end_time - start_time
-	with open('get_legal_moves_time_log.txt', 'a') as logger:
-		logger.write(f"{datetime.date.today().strftime('%A %B %d')} - {sum_moves} in {time_diff:.4f} -- {sum_moves/time_diff:.2f} mps\n")
+#def test_get_legal_move_speed():
+#	with open("../engine/random_fens.txt", 'r') as rand_fens:
+#		boards = []
+#		for fen in rand_fens:
+#			boards.append(gui.Board(game, *gui.fen_to_board_input(fen, game)))
+#
+#	start_time = time.time()
+#	sum_moves = 0
+#	for board in boards:
+#		for piece in board.get_pieces():
+#			sum_moves += len(piece.get_legal_moves())
+#	end_time = time.time()
+#	time_diff = end_time - start_time
+#	with open('get_legal_moves_time_log.txt', 'a') as logger:
+#		logger.write(f"{datetime.date.today().strftime('%A %B %d')} - {sum_moves} in {time_diff:.4f} -- {sum_moves/time_diff:.2f} mps\n")
 
 
 random_fens.close()

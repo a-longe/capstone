@@ -18,7 +18,7 @@ PIECE_GLYPH = 3
 DIVMOD_ROW = 0
 DIVMOD_COLUMN = 1
 
-BoardFenInput = tuple[list[PiecePositionInput], bool, int, int, dict[str:bool], int]
+BoardFenInput = tuple[list[PiecePositionInput], bool, int, int, dict[str,bool], int]
 
 STARTING_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
@@ -44,7 +44,7 @@ INT_TO_LETTER = {
 }
 
 class MoveEvalResponces:
-    INVALID_MOVE = 0
+    INVALID_MOVE = -1
     MOVE_TO_EMPTY = 1
     CAPTURE_MOVE = 2
     CASTLE_KINGSIDE = 3
@@ -137,12 +137,17 @@ def on_mouse_down(game):
         # The event positions is the mouse coordinates
         if piece.rect.collidepoint(pg.mouse.get_pos()) and \
            piece.can_pickup():
+<<<<<<< HEAD
             print(f'from on_mouse_down {piece}')
+=======
+            print(piece, list(move[MOVE_END] for move in piece.get_valid_moves()))
+>>>>>>> legal_moves
             # store current center
             piece.previous_center = piece.rect.center
             piece.click = True
 
 def on_mouse_up(game) -> None:
+<<<<<<< HEAD
     cur_board:Board = game.get_current_board()
     piece = game.get_current_board().get_clicked_piece()
     if piece == -1: return # would like to make this nicer but will get back to it later
@@ -155,11 +160,47 @@ def on_mouse_up(game) -> None:
 
     new_board = cur_board.get_board_after_move(piece, start_square, end_square)
     if new_board == -1: return
+=======
+    cur_board = game.get_current_board()
+    piece = cur_board.get_clicked_piece()
+    if piece == -1: return # would like to make this nicer but will get back to it later
+    start_square = piece.square
+    end_square = game.get_square_index(*pg.mouse.get_pos())
+    move = (start_square, end_square)
+    piece.snap_to_square()
+    piece.click = False
+    
+    """
+    We're going to check if a move is legal her now instead of checking in eval_move
+    """
 
+    new_board = cur_board.get_board_after_move(piece, start_square, end_square)
+    if new_board == -1:
+        piece.return_to_previous()
+        return
+>>>>>>> legal_moves
+
+    if new_board.is_in_check(new_board.is_white_turn):
+        print('not a legal move')
+        piece.return_to_previous()
+        return
+    
+    
+    sf_eval_dump = engine.call_stockfish([f"ucinewgame",
+                                            f"position fen {new_board.get_fen()}",
+                                            "eval"])
+    sf_eval = engine.get_last_line_with_prefix(sf_eval_dump, 'Final evaluation').split()[2]
+    print(f"current board: {sf_eval}")
     game.add_board(new_board)
+<<<<<<< HEAD
     print(game.get_current_board().get_fen())
     cur_board.print()
 
+=======
+    new_board.print()
+    print(new_board.get_fen(), end='\n\n')
+    
+>>>>>>> legal_moves
 
 def fen_to_pieces(fen, game) -> PiecePositionInput:
     lo_pieces = []
@@ -278,7 +319,7 @@ class Bishop(Piece):
         valid_moves = []
         for offset in OFFSETS:
             valid_moves += self.board.get_sliding_moves(self.square, offset)
-        return [valid_move for valid_move in valid_moves]
+        return valid_moves
 
 class Rook(Piece):
     def __init__(self, board, rect, glyph) -> None:
@@ -290,7 +331,7 @@ class Rook(Piece):
         valid_moves = []
         for offset in OFFSETS:
             valid_moves += self.board.get_sliding_moves(self.square, offset)
-        return [valid_move for valid_move in valid_moves]
+        return valid_moves
 
 class Queen(Piece):
     def __init__(self, board, rect, glyph) -> None:
@@ -301,7 +342,7 @@ class Queen(Piece):
         valid_moves = []
         for offset in OFFSETS:
             valid_moves += self.board.get_sliding_moves(self.square, offset)
-        return [valid_move for valid_move in valid_moves]
+        return valid_moves
 
 class Knight(Piece):
     def __init__(self, board, rect, glyph) -> None:
@@ -311,7 +352,7 @@ class Knight(Piece):
         OFFSETS = ((-2, -1), (-2, 1), (-1, -2), (-1, 2), \
                     (1, -2), (1, 2), (2, -1), (2, 1))
         valid_moves =  self.board.get_jumping_moves(self.square, OFFSETS)
-        return [valid_move for valid_move in valid_moves]
+        return valid_moves
 
 class King(Piece):
     def __init__(self, board, rect, glyph) -> None:
@@ -344,7 +385,7 @@ class King(Piece):
                 elif castling_right.lower() == 'q':
                     valid_moves += castling_queenside_moves
 
-        return [valid_move for valid_move in valid_moves]
+        return valid_moves
 
 class Pawn(Piece):
     def __init__(self, board, rect, glyph) -> None:
@@ -398,8 +439,7 @@ class Pawn(Piece):
             if new_sqr not in self.board.piece_map.keys():
                 # no piece at new square
                 valid_moves.append((self.square, new_sqr))
-        return [valid_move for valid_move in valid_moves]
-
+        return valid_moves
 
 class Board:
     def __init__(self, game, piece_positions:list[PiecePositionInput],
@@ -475,6 +515,7 @@ class Board:
         So to fix this we need to reevaluate how to check if a king is in check
         '''
         # return False
+<<<<<<< HEAD
         print(f'from does_move_attack_king{move}')
         print(f'from does_move_attack_king{pformat(self.piece_map)}')
         board_after = self.get_board_after_move(piece, *move, True)
@@ -483,6 +524,18 @@ class Board:
         valid_targets = [move[1] for move in board_after.get_all_valid_moves()]
         return king_square in valid_targets
         
+=======
+        piece = self.piece_map[move[MOVE_START]]
+        board_after = self.get_board_after_move(piece, *move)
+        return board_after.is_in_check(is_check_on_white)
+
+    def is_in_check(self, is_check_on_white:bool) -> bool:
+        glyph_to_find = 'k' if is_check_on_white else 'K'
+        king_square = [piece for piece in self.get_pieces() if piece.glyph == glyph_to_find][0].square
+        valid_targets = [move[1] for move in self.get_all_valid_moves() if self.piece_map[move[MOVE_START]].is_white == is_check_on_white]
+        return king_square in valid_targets
+
+>>>>>>> legal_moves
     def convert_valid_to_legal(self, lo_moves:list[Move]) -> list[Move]:
         return [valid_move for valid_move in lo_moves if not self.does_move_create_check(self.is_white_turn, self.piece_map[MOVE_START], valid_move)]
 
@@ -500,6 +553,7 @@ class Board:
         Create new board repr to check if board is in check
         '''
         move = (piece.square, new_square)
+<<<<<<< HEAD
         
         
         is_valid = self.game.mouse_inside_bounds() and \
@@ -536,8 +590,30 @@ class Board:
             else:
                 return MoveEvalResponces.MOVE_TO_EMPTY
         else:
+=======
+        is_valid = self.game.mouse_inside_bounds() and piece.square != new_square and \
+                    move in piece.get_valid_moves()
+        if not is_valid:
+>>>>>>> legal_moves
             return MoveEvalResponces.INVALID_MOVE
 
+        if self.is_move_en_passent(move): return MoveEvalResponces.EN_PASSENT
+        elif self.is_move_double_push(move): return MoveEvalResponces.DOUBLE_PUSH
+        elif self.is_move_promotion(move): return MoveEvalResponces.PROMOTION
+        elif self.is_move_castling(move):
+            if self.is_castle_kingside(move):
+                return MoveEvalResponces.CASTLE_KINGSIDE
+            else:
+                return MoveEvalResponces.CASTLE_QUEENSIDE
+
+        if new_square in self.piece_map.keys():
+            piece_to_take = game.get_current_board().piece_map[new_square]
+            if not piece.is_same_colour(piece_to_take):
+                return MoveEvalResponces.CAPTURE_MOVE
+        else:
+            return MoveEvalResponces.MOVE_TO_EMPTY
+        return MoveEvalResponces.INVALID_MOVE
+        
     def piece_map_to_board_input(self, piece_map:dict[int, 'Piece']) -> PiecePositionInput:
         pieces = piece_map.values()
         return [(*piece.rect[:3], piece.glyph) for piece in pieces]
@@ -605,6 +681,12 @@ class Board:
             else:
                 self.castling_rights['k'] = False
                 self.castling_rights['q'] = False
+
+        match end_square:
+            case 0: self.castling_rights['q'] = False
+            case 7: self.castling_rights['k'] = False
+            case 56: self.castling_rights['Q'] = False
+            case 63: self.castling_rights['K'] = False
 
 
     def get_board_after_halfmove(self, move:Move) -> 'Board':
@@ -785,10 +867,16 @@ class Board:
                      new_halfmove_count, self.castling_rights,
                      new_en_passent_target)
 
+<<<<<<< HEAD
     def get_board_after_move(self, piece:Piece, start_square:int, end_square:int, search_only_valid=False) -> 'Board':
         piece = self.piece_map[start_square]
         move_evalutation = self.eval_move(piece, end_square, search_only_valid)
         # print(f"move_eval: {move_evalutation}")
+=======
+    def get_board_after_move(self, piece:Piece, start_square:int, end_square:int) -> 'Board':
+        move_evalutation = self.eval_move(piece, end_square)
+        print(f"move_eval: {move_evalutation}")
+>>>>>>> legal_moves
         match move_evalutation:
             case MoveEvalResponces.INVALID_MOVE:
                 piece.return_to_previous()
@@ -937,7 +1025,7 @@ class Game:
         self.white_time = min_to_sec(5)
         self.black_time = min_to_sec(5)
         self.is_game_over = False
-        self.display_blue = True
+        self.display_blue = False
         """
         Note:
         Used to have is_white_turn and move_count in this init but because
@@ -1008,9 +1096,7 @@ class Game:
         board = self.get_current_board()
         piece = board.get_clicked_piece()
         if piece == -1: return
-    
-        legal_squares = [move[1] for move in piece.get_valid_moves()]
-        
+        legal_squares = [move[1] for move in piece.get_valid_moves() if board.does_move_create_check(board.is_white_turn, move)]
         make_squares_blue(self.surface, self.square_size, legal_squares)
 
     def update_game(self) -> None:
