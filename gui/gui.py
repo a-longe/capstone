@@ -137,30 +137,12 @@ def on_mouse_down(game):
         # The event positions is the mouse coordinates
         if piece.rect.collidepoint(pg.mouse.get_pos()) and \
            piece.can_pickup():
-<<<<<<< HEAD
-            print(f'from on_mouse_down {piece}')
-=======
             print(piece, list(move[MOVE_END] for move in piece.get_valid_moves()))
->>>>>>> legal_moves
             # store current center
             piece.previous_center = piece.rect.center
             piece.click = True
 
 def on_mouse_up(game) -> None:
-<<<<<<< HEAD
-    cur_board:Board = game.get_current_board()
-    piece = game.get_current_board().get_clicked_piece()
-    if piece == -1: return # would like to make this nicer but will get back to it later
-    start_square = piece.square
-    end_square = game.get_square_index(*pg.mouse.get_pos())
-
-
-    if (start_square, end_square) not in cur_board.piece_map[start_square].get_valid_moves():
-        return
-
-    new_board = cur_board.get_board_after_move(piece, start_square, end_square)
-    if new_board == -1: return
-=======
     cur_board = game.get_current_board()
     piece = cur_board.get_clicked_piece()
     if piece == -1: return # would like to make this nicer but will get back to it later
@@ -178,7 +160,6 @@ def on_mouse_up(game) -> None:
     if new_board == -1:
         piece.return_to_previous()
         return
->>>>>>> legal_moves
 
     if new_board.is_in_check(new_board.is_white_turn):
         print('not a legal move')
@@ -192,16 +173,9 @@ def on_mouse_up(game) -> None:
     sf_eval = engine.get_last_line_with_prefix(sf_eval_dump, 'Final evaluation').split()[2]
     print(f"current board: {sf_eval}")
     game.add_board(new_board)
-<<<<<<< HEAD
-    print(game.get_current_board().get_fen())
-    cur_board.print()
-
-=======
     new_board.print()
     print(new_board.get_fen(), end='\n\n')
     
->>>>>>> legal_moves
-
 def fen_to_pieces(fen, game) -> PiecePositionInput:
     lo_pieces = []
     pieces = fen.split(' ')[0]
@@ -515,16 +489,6 @@ class Board:
         So to fix this we need to reevaluate how to check if a king is in check
         '''
         # return False
-<<<<<<< HEAD
-        print(f'from does_move_attack_king{move}')
-        print(f'from does_move_attack_king{pformat(self.piece_map)}')
-        board_after = self.get_board_after_move(piece, *move, True)
-        glyph_to_find = 'K' if is_check_on_white else 'k'
-        king_square = [piece for piece in board_after.get_pieces() if piece.glyph == glyph_to_find][0].square
-        valid_targets = [move[1] for move in board_after.get_all_valid_moves()]
-        return king_square in valid_targets
-        
-=======
         piece = self.piece_map[move[MOVE_START]]
         board_after = self.get_board_after_move(piece, *move)
         return board_after.is_in_check(is_check_on_white)
@@ -535,7 +499,6 @@ class Board:
         valid_targets = [move[1] for move in self.get_all_valid_moves() if self.piece_map[move[MOVE_START]].is_white == is_check_on_white]
         return king_square in valid_targets
 
->>>>>>> legal_moves
     def convert_valid_to_legal(self, lo_moves:list[Move]) -> list[Move]:
         return [valid_move for valid_move in lo_moves if not self.does_move_create_check(self.is_white_turn, self.piece_map[MOVE_START], valid_move)]
 
@@ -553,49 +516,9 @@ class Board:
         Create new board repr to check if board is in check
         '''
         move = (piece.square, new_square)
-<<<<<<< HEAD
-        
-        
-        is_valid = self.game.mouse_inside_bounds() and \
-                new_square in [move[1] for move in piece.get_valid_moves()]
-
-        if not search_only_valid:
-            # must search legal moves as well
-            is_valid = is_valid and \
-                    new_square in [move[1] for move in piece.get_valid_moves() if \
-                    self.does_move_create_check(self.is_white_turn, piece, move)]
-
-
-        if is_valid:
-            if self.is_move_castling(move):
-                if self.is_castle_kingside(move):
-                    return MoveEvalResponces.CASTLE_KINGSIDE
-                else:
-                    return MoveEvalResponces.CASTLE_QUEENSIDE
-            elif self.is_move_en_passent(move): return MoveEvalResponces.EN_PASSENT
-            elif self.is_move_double_push(move): return MoveEvalResponces.DOUBLE_PUSH
-            elif self.is_move_promotion(move): return MoveEvalResponces.PROMOTION
-
-            # does piece collide with another piece
-            is_colliding = new_square in game.get_current_board().piece_map.keys()
-
-            if is_colliding:
-                piece_to_take = game.get_current_board().piece_map[new_square]
-                is_diff_colour = not piece.is_same_colour(piece_to_take)
-
-                if is_diff_colour:
-                    return MoveEvalResponces.CAPTURE_MOVE
-                else:
-                    return MoveEvalResponces.INVALID_MOVE
-            else:
-                return MoveEvalResponces.MOVE_TO_EMPTY
-        else:
-=======
         is_valid = self.game.mouse_inside_bounds() and piece.square != new_square and \
                     move in piece.get_valid_moves()
-        if not is_valid:
->>>>>>> legal_moves
-            return MoveEvalResponces.INVALID_MOVE
+        if not is_valid: return MoveEvalResponces.INVALID_MOVE
 
         if self.is_move_en_passent(move): return MoveEvalResponces.EN_PASSENT
         elif self.is_move_double_push(move): return MoveEvalResponces.DOUBLE_PUSH
@@ -867,16 +790,9 @@ class Board:
                      new_halfmove_count, self.castling_rights,
                      new_en_passent_target)
 
-<<<<<<< HEAD
-    def get_board_after_move(self, piece:Piece, start_square:int, end_square:int, search_only_valid=False) -> 'Board':
-        piece = self.piece_map[start_square]
-        move_evalutation = self.eval_move(piece, end_square, search_only_valid)
-        # print(f"move_eval: {move_evalutation}")
-=======
     def get_board_after_move(self, piece:Piece, start_square:int, end_square:int) -> 'Board':
         move_evalutation = self.eval_move(piece, end_square)
         print(f"move_eval: {move_evalutation}")
->>>>>>> legal_moves
         match move_evalutation:
             case MoveEvalResponces.INVALID_MOVE:
                 piece.return_to_previous()
