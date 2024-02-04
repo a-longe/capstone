@@ -1,4 +1,5 @@
 import pygame as pg
+import time
 import os
 import sys
 import math
@@ -137,7 +138,8 @@ def on_mouse_down(game):
         # The event positions is the mouse coordinates
         if piece.rect.collidepoint(pg.mouse.get_pos()) and \
            piece.can_pickup():
-            print(piece, list(move[MOVE_END] for move in piece.get_valid_moves()))
+            valid_targets = [move[MOVE_END] for move in piece.get_valid_moves()]
+            print(piece, valid_targets)
             # store current center
             piece.previous_center = piece.rect.center
             piece.click = True
@@ -152,26 +154,32 @@ def on_mouse_up(game) -> None:
     piece.snap_to_square()
     piece.click = False
     
-    """
-    We're going to check if a move is legal her now instead of checking in eval_move
-    """
-
     new_board = cur_board.get_board_after_move(piece, start_square, end_square)
     if new_board == -1:
         piece.return_to_previous()
         return
 
-    if new_board.is_in_check(new_board.is_white_turn):
+    """
+    We're going to check if a move is legal her now instead of checking in eval_move
+    """
+    
+    if new_board.is_in_check(not new_board.is_white_turn):
         print('not a legal move')
-        piece.return_to_previous()
+        # when calling is_in_check piece is move for some reason, atm
+        # fix by moveing it back but will fix it better later
+        # NOTE: the more i look at this the more i want to throw up 
+        piece.move_to(start_square)
         return
     
-    
-    sf_eval_dump = engine.call_stockfish([f"ucinewgame",
-                                            f"position fen {new_board.get_fen()}",
-                                            "eval"])
-    sf_eval = engine.get_last_line_with_prefix(sf_eval_dump, 'Final evaluation').split()[2]
-    print(f"current board: {sf_eval}")
+    try:
+        sf_eval_dump = engine.call_stockfish([f"ucinewgame",
+                                                f"position fen {new_board.get_fen()}",
+                                                "eval"])
+        sf_eval = engine.get_last_line_with_prefix(sf_eval_dump, 'Final evaluation').split()[2]
+        print(f"current board: {sf_eval}")
+    except: # throws an error when no king, idk what exception this would be
+        print('Engine has thown an error getting an eval')
+
     game.add_board(new_board)
     new_board.print()
     print(new_board.get_fen(), end='\n\n')
@@ -374,7 +382,7 @@ class Pawn(Piece):
             match glyph:
                 case 'q' | 'Q':
                     self.board.piece_map[self.square] = Queen(self.board, self.rect, glyph)
-                case 'n' | 'N':
+                case 'n' | 'N' | 'k' | 'K':
                     self.board.piece_map[self.square] = Knight(self.board, self.rect, glyph)
                 case 'r' | 'R':
                     self.board.piece_map[self.square] = Rook(self.board, self.rect, glyph)
@@ -461,10 +469,14 @@ class Board:
 
     def is_in_check(self, is_check_on_white:bool) -> bool:
         glyph_to_find = 'K' if is_check_on_white else 'k'
-        king_square = [piece for piece in board_after.get_pieces() if piece.glyph == glyph_to_find][0].square
-        valid_targets = [move[1] for move in board_after.get_all_valid_moves()]
+        possible_king_squares = [piece for piece in self.get_pieces() if piece.glyph == glyph_to_find]
+        if len(possible_king_squares) != 0:
+            king_square = possible_king_squares[0].square
+        else:
+            # no king on board
+            return False
+        valid_targets = [move[1] for move in self.get_all_valid_moves()]
         return king_square in valid_targets
-
 
     def does_move_create_check(self, is_check_on_white:bool, piece:Piece, move:Move) -> bool:
         '''
@@ -489,15 +501,14 @@ class Board:
         So to fix this we need to reevaluate how to check if a king is in check
         '''
         # return False
-        piece = self.piece_map[move[MOVE_START]]
+        try:
+            piece = self.piece_map[move[MOVE_START]]
+        except KeyError:
+            print(f"{move[MOVE_START]} not in {self.piece_map.keys()}")
+            return False
+
         board_after = self.get_board_after_move(piece, *move)
         return board_after.is_in_check(is_check_on_white)
-
-    def is_in_check(self, is_check_on_white:bool) -> bool:
-        glyph_to_find = 'k' if is_check_on_white else 'K'
-        king_square = [piece for piece in self.get_pieces() if piece.glyph == glyph_to_find][0].square
-        valid_targets = [move[1] for move in self.get_all_valid_moves() if self.piece_map[move[MOVE_START]].is_white == is_check_on_white]
-        return king_square in valid_targets
 
     def convert_valid_to_legal(self, lo_moves:list[Move]) -> list[Move]:
         return [valid_move for valid_move in lo_moves if not self.does_move_create_check(self.is_white_turn, self.piece_map[MOVE_START], valid_move)]
@@ -941,7 +952,7 @@ class Game:
         self.white_time = min_to_sec(5)
         self.black_time = min_to_sec(5)
         self.is_game_over = False
-        self.display_blue = False
+        self.display_blue = True
         """
         Note:
         Used to have is_white_turn and move_count in this init but because
@@ -1012,7 +1023,7 @@ class Game:
         board = self.get_current_board()
         piece = board.get_clicked_piece()
         if piece == -1: return
-        legal_squares = [move[1] for move in piece.get_valid_moves() if board.does_move_create_check(board.is_white_turn, move)]
+        legal_squares = [move[1] for move in piece.get_valid_moves()]
         make_squares_blue(self.surface, self.square_size, legal_squares)
 
     def update_game(self) -> None:
@@ -1025,6 +1036,7 @@ class Game:
 # the main loop needs to call an event loop to establish an interactive game
 # and needs to call the game to update itself
 def main(game:Game) -> None:
+    time.sleep(1/60)
     game_event_loop(game)
     game.update_game()
 
