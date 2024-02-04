@@ -953,6 +953,7 @@ class Game:
         self.black_time = min_to_sec(5)
         self.is_game_over = False
         self.display_blue = True
+        self.is_engine_white = False
         """
         Note:
         Used to have is_white_turn and move_count in this init but because
@@ -960,6 +961,9 @@ class Game:
         have a function that turns the fen string into everything EXCEPT the
         game being passed in
         """
+
+    def is_engine_turn(self) -> bool:
+        return self.get_current_board().is_white_turn == self.is_engine_white
 
     def toggle_blue(self) -> None:
         self.display_blue = ~self.display_blue
@@ -1040,20 +1044,34 @@ def main(game:Game) -> None:
     game_event_loop(game)
     game.update_game()
     frame_end = time.time()
-    time.sleep(math.max((1/60)-(frame_end-frame_start)), 0)
+    time.sleep(max(((1/60)-(frame_end-frame_start), 0)))
 
 
 # Notice that the event loop has been given its own function. This makes
 # the program easier to understand.
 def game_event_loop(game) -> None:
-    for event in pg.event.get():
-        if event.type == pg.MOUSEBUTTONDOWN:
-            on_mouse_down(game)
-        elif event.type == pg.MOUSEBUTTONUP:
-            on_mouse_up(game)
-        elif event.type == pg.QUIT:
-            pg.quit()
-            sys.exit()
+    # maybe add divergent path for engine input here?
+    if game.is_engine_turn():
+        board = game.get_current_board()
+        try:
+            best_move_str = engine.get_bestmove(board.get_fen(), 1000, '')
+        except:
+            return
+        alg_start, alg_end = best_move_str[:2], best_move_str[2:]
+        start_square = algebraic_to_square(alg_start)
+        end_square = algebraic_to_square(alg_end)
+        piece = board.piece_map[start_square]
+        new_board = board.get_board_after_move(piece, start_square, end_square)
+        game.add_board(new_board)
+    else:
+        for event in pg.event.get():
+            if event.type == pg.MOUSEBUTTONDOWN:
+                on_mouse_down(game)
+            elif event.type == pg.MOUSEBUTTONUP:
+                on_mouse_up(game)
+            elif event.type == pg.QUIT:
+                pg.quit()
+                sys.exit()
 
 
 RAND_FENS_PATH = '/home/alonge/Documents/code/capstone/engine/random_fens.txt'
