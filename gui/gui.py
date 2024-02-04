@@ -1036,9 +1036,11 @@ class Game:
 # the main loop needs to call an event loop to establish an interactive game
 # and needs to call the game to update itself
 def main(game:Game) -> None:
-    time.sleep(1/60)
+    frame_start = time.time()
     game_event_loop(game)
     game.update_game()
+    frame_end = time.time()
+    time.sleep(math.max((1/60)-(frame_end-frame_start)), 0)
 
 
 # Notice that the event loop has been given its own function. This makes
