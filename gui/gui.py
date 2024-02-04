@@ -1055,6 +1055,7 @@ def game_event_loop(game) -> None:
         board = game.get_current_board()
         try:
             best_move_str = engine.get_bestmove(board.get_fen(), 1000, '')
+            print(best_move_str)
         except:
             return
         alg_start, alg_end = best_move_str[:2], best_move_str[2:]
@@ -1089,7 +1090,7 @@ STARTING_FEN,
 get_random_fen(),
 '8/3pp3/8/8/8/8/3PP3/8 b - - 0 1',
 'r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1',
-'8/3P4/8/8/8/8/4p3/8 w - - 0 1',
+'8/3P4/8/K7/7k/8/4p3/8 w - - 0 1',
 '8/R3k3/7b/8/8/3R4/3K4/8 w - - 0 1'
 ]
 
