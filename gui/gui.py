@@ -625,6 +625,8 @@ class Board:
 
     def get_board_after_halfmove(self, move:Move) -> 'Board':
         start_square, end_square = move
+        print('********', move)
+        print('*****', self.piece_map.keys())
         if type(self.piece_map[start_square]) == Pawn:
             new_halfmove_count = 0
         else:
@@ -952,7 +954,7 @@ class Game:
         self.white_time = min_to_sec(5)
         self.black_time = min_to_sec(5)
         self.is_game_over = False
-        self.display_blue = True
+        self.display_blue = False
         self.is_engine_white = False
         """
         Note:
@@ -1018,7 +1020,8 @@ class Game:
             txt_square_i = font.render(str(square_num), True, font_color)
             txt_algebraic = font.render(str(square_index_to_algebraic(square_num)), True, font_color)
             self.surface.blit(txt_square_i, square_num_rect)
-            #self.surface.blit(txt_algebraic, algebraic_rect)
+            #self.surface.blit(txt_algebraic, algebraic_rect) 
+        if self.display_blue: self.display_blue_squares()
 
     def clear_surface(self) -> None:
         self.surface.fill(0)
@@ -1027,13 +1030,12 @@ class Game:
         board = self.get_current_board()
         piece = board.get_clicked_piece()
         if piece == -1: return
-        legal_squares = [move[1] for move in piece.get_valid_moves()]
+        legal_squares = [move[MOVE_END] for move in piece.get_valid_moves() if board.get_board_after_move(piece, *move).is_in_check(board.is_white_turn)]
         make_squares_blue(self.surface, self.square_size, legal_squares)
 
     def update_game(self) -> None:
         self.clear_surface()
         self.display_grid()
-        if self.display_blue: self.display_blue_squares()
         self.get_current_board().update_pieces()
 
 
