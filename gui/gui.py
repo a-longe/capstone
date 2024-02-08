@@ -168,7 +168,7 @@ def on_mouse_up(game) -> None:
         # when calling is_in_check piece is move for some reason, atm
         # fix by moveing it back but will fix it better later
         # NOTE: the more i look at this the more i want to throw up 
-        piece.move_to(start_square)
+        new_board.move(end_square, start_square)
         return
     
     try:
@@ -263,22 +263,6 @@ class Piece:
         y //= self.board.game.square_size
         return (y * 8) + x
 
-    def move_to(self, new_square:int) -> None:
-        # with new index as key, set value to self
-        # then take original location in map and delete
-        # set self.square to new location
-        cur_board = self.board
-        old_square = self.square
-        move = (old_square, new_square)
-
-        print(f'from move_to {move}')
-
-        cur_board.piece_map[new_square] = self
-        del cur_board.piece_map[old_square]
-        
-        cur_board.piece_map[new_square].rect.topleft = cur_board.game.get_cords_from_index(new_square) 
-
-        self.square = self.get_square_index()
 
     def get_valid_moves(self) -> list[Move]:
         print("ERROR: This piece has not been classified past being a piece")
@@ -456,6 +440,21 @@ class Board:
         self.castling_rights = castling_rights
         self.en_passent_target = en_passent_target
         self.legal_moves_map = {}
+
+    def move(self, start_square:int, end_square:int) -> None:
+        # with new index as key, set value to self
+        # then take original location in map and delete
+        # set self.square to new location
+        move = (start_square, end_square)
+
+        print(f'from move_to {move}')
+    
+        self.piece_map[end_square] = self.piece_map[start_square]
+        del self.piece_map[start_square]
+         
+        self.piece_map[end_square].rect.topleft = self.game.get_cords_from_index(end_square) 
+
+        self.piece_map[end_square].square  = self.piece_map[end_square].get_square_index()
 
     def print(self) -> None:
         for square_index in range(64):
@@ -640,7 +639,7 @@ class Board:
 
         new_en_passent_target = self.en_passent_target
 
-        new_piece_map[start_square].move_to(end_square)
+        self.move(start_square, end_square)
         piece_map_board_input = self.piece_map_to_board_input(new_piece_map)
 
         if (-1 < self.en_passent_target < 32 and self.is_white_turn) or \
@@ -663,7 +662,7 @@ class Board:
 
         new_en_passent_target = self.en_passent_target
 
-        new_piece_map[start_square].move_to(end_square)
+        self.move(start_square, end_square)
         piece_map_board_input = self.piece_map_to_board_input(new_piece_map)
 
         if (-1 < self.en_passent_target < 32 and self.is_white_turn) or \
@@ -689,8 +688,8 @@ class Board:
         rook_start_sqr = end_square + 1
         rook_end_sqr = end_square - 1
         
-        new_piece_map[rook_start_sqr].move_to(rook_end_sqr)
-        new_piece_map[start_square].move_to(end_square)
+        self.move(rook_start_sqr, rook_end_sqr)
+        self.move(start_square, end_square)
 
         piece_map_board_input = self.piece_map_to_board_input(new_piece_map)
 
@@ -718,8 +717,8 @@ class Board:
         rook_start_sqr = end_square - 2 
         rook_end_sqr = end_square + 1
     
-        new_piece_map[start_square].move_to(end_square)
-        new_piece_map[rook_start_sqr].move_to(rook_end_sqr)
+        self.move(start_square, end_square)
+        self.move(rook_start_sqr, rook_end_sqr)
 
         piece_map_board_input = self.piece_map_to_board_input(new_piece_map)
 
@@ -747,7 +746,7 @@ class Board:
         direction = -1 if self.is_white_turn else 1
         square_to_del = end_square + (8 * -direction)
         
-        new_piece_map[start_square].move_to(end_square)
+        self.move(start_square, end_square)
         del new_piece_map[square_to_del]
 
         piece_map_board_input = self.piece_map_to_board_input(new_piece_map)
@@ -769,7 +768,7 @@ class Board:
         new_move_count = self.move_count + 1 if self.is_white_turn else self.move_count
         new_halfmove_count = 0
             
-        new_piece_map[start_square].move_to(end_square)
+        self.move(start_square, end_square)
 
         piece_map_board_input = self.piece_map_to_board_input(new_piece_map)
 
@@ -789,7 +788,7 @@ class Board:
         
         new_en_passent_target = self.en_passent_target
 
-        new_piece_map[start_square].move_to(end_square) 
+        self.move(start_square, end_square)
         new_piece_map[end_square].promote()
 
         piece_map_board_input = self.piece_map_to_board_input(new_piece_map)
