@@ -170,7 +170,7 @@ def on_mouse_up(game) -> None:
         # when calling is_in_check piece is move for some reason, atm
         # fix by moveing it back but will fix it better later
         # NOTE: the more i look at this the more i want to throw up 
-        new_board.move(end_square, start_square)
+        cur_board.move(end_square, start_square)
         return
     
     try:
@@ -449,8 +449,6 @@ class Board:
         # set self.square to new location
         move = (start_square, end_square)
 
-        print(f'from move_to {move}')
-    
         self.piece_map[end_square] = self.piece_map[start_square]
         del self.piece_map[start_square]
          
@@ -549,9 +547,13 @@ class Board:
             return MoveEvalResponces.MOVE_TO_EMPTY
         return MoveEvalResponces.INVALID_MOVE
         
-    def piece_map_to_board_input(self, piece_map:dict[int, 'Piece']) -> PiecePositionInput:
+    def piece_map_to_board_input(self, piece_map:dict[int, 'Piece']) -> list[PiecePositionInput]:
         pieces = piece_map.values()
-        return [(*piece.rect[:3], piece.glyph) for piece in pieces]
+        rect_size = self.game.square_size
+        piece_pos_input = [] 
+        for piece in pieces:
+            piece_pos_input.append((*self.game.get_cords_from_index(piece.square), rect_size, piece.glyph))
+        return piece_pos_input
 
     def is_move_promotion(self, move:Move) -> bool:
         if type(self.piece_map[move[0]]) == Pawn:
@@ -810,7 +812,6 @@ class Board:
 
     def get_board_after_move(self, piece:Piece, start_square:int, end_square:int, glyph='') -> 'Board':
         move_evalutation = self.eval_move(piece, end_square)
-        print(f"move_eval: {move_evalutation}")
         match move_evalutation:
             case MoveEvalResponces.INVALID_MOVE:
                 piece.return_to_previous()
@@ -821,7 +822,7 @@ class Board:
                                                               end_square))
 
             case MoveEvalResponces.CAPTURE_MOVE:
-                if type(self.piece_map[end_square]) == King: self.game.is_game_over = True
+                #if type(self.piece_map[end_square]) == King: self.game.is_game_over = True
                 new_board = self.get_board_after_capture((start_square,
                                                           end_square))
 
@@ -961,6 +962,7 @@ class Game:
         self.is_game_over = False
         self.display_blue = True
         self.is_engine_white = False
+        self.enable_engine = False
         """
         Note:
         Used to have is_white_turn and move_count in this init but because
@@ -970,7 +972,7 @@ class Game:
         """
 
     def is_engine_turn(self) -> bool:
-        return self.get_current_board().is_white_turn == self.is_engine_white
+        return self.get_current_board().is_white_turn == self.is_engine_white and self.enable_engine
 
     def toggle_blue(self) -> None:
         self.display_blue = ~self.display_blue
@@ -1035,7 +1037,12 @@ class Game:
         board = self.get_current_board()
         piece = board.get_clicked_piece()
         if piece == -1: return
-        legal_squares = [move[MOVE_END] for move in piece.get_valid_moves() if board.get_board_after_move(piece, *move).is_in_check(board.is_white_turn)]
+        legal_squares = []
+        for move in piece.get_valid_moves():
+            target_sqr = move[MOVE_END]
+            board_after = board.get_board_after_move(piece, *move)
+            if not board_after.is_in_check(not board_after.is_white_turn):
+                legal_squares.append(target_sqr)
         make_squares_blue(self.surface, self.square_size, legal_squares)
 
     def update_game(self) -> None:
