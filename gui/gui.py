@@ -507,6 +507,7 @@ class Board:
             return False
 
         board_after = self.get_board_after_move(piece, *move)
+        if board_after == -1: return False
         return board_after.is_in_check(is_check_on_white)
 
     def convert_valid_to_legal(self, lo_moves:list[Move]) -> list[Move]:
@@ -933,8 +934,7 @@ class Board:
 
 
     def del_piece(self, piece:Piece) -> None:
-        map_key = self.game.get_square_index(*piece.rect[:2])
-        del self.piece_map[map_key]
+        del self.piece_map[piece.square]
 
     def update_pieces(self) -> None:
         for piece in self.get_pieces():
@@ -1041,6 +1041,7 @@ class Game:
         for move in piece.get_valid_moves():
             target_sqr = move[MOVE_END]
             board_after = board.get_board_after_move(piece, *move)
+            if board_after == -1: continue
             if not board_after.is_in_check(not board_after.is_white_turn):
                 legal_squares.append(target_sqr)
         make_squares_blue(self.surface, self.square_size, legal_squares)
