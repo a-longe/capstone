@@ -1041,8 +1041,7 @@ class Game:
         for move in piece.get_valid_moves():
             target_sqr = move[MOVE_END]
             board_after = board.get_board_after_move(piece, *move)
-            if board_after == -1: 
-            if not board_after.is_in_check(not board_after.is_white_turn):
+            if board_after == -1 or not board_after.is_in_check(not board_after.is_white_turn):
                 legal_squares.append(target_sqr)
         make_squares_blue(self.surface, self.square_size, legal_squares)
 
