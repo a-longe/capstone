@@ -519,7 +519,7 @@ class Board:
             valid_moves += piece.get_valid_moves()
         return valid_moves
 
-    def eval_move(self, piece:'Piece', new_square:int, search_only_valid=False) -> int:
+    def eval_move(self, piece:'Piece', new_square:int) -> int:
         '''
         Fix function to make it cleaner, one flow of execution, one return statement 
         match case?
@@ -1041,7 +1041,7 @@ class Game:
         for move in piece.get_valid_moves():
             target_sqr = move[MOVE_END]
             board_after = board.get_board_after_move(piece, *move)
-            if board_after == -1: continue
+            if board_after == -1: 
             if not board_after.is_in_check(not board_after.is_white_turn):
                 legal_squares.append(target_sqr)
         make_squares_blue(self.surface, self.square_size, legal_squares)
