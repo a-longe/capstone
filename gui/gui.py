@@ -153,8 +153,6 @@ def on_mouse_up(game) -> None:
     start_square = piece.square
     end_square = game.get_square_index(*pg.mouse.get_pos())
     move = (start_square, end_square)
-    piece.snap_to_square()
-    piece.click = False
     
     new_board = cur_board.get_board_after_move(piece, start_square, end_square)
     if new_board == -1:
@@ -170,7 +168,9 @@ def on_mouse_up(game) -> None:
         # when calling is_in_check piece is move for some reason, atm
         # fix by moveing it back but will fix it better later
         # NOTE: the more i look at this the more i want to throw up 
-        cur_board.move(end_square, start_square)
+        # cur_board.move(end_square, start_square)
+        piece.return_to_previous()
+        piece.click = False
         return
     
     try:
@@ -182,6 +182,8 @@ def on_mouse_up(game) -> None:
     except: # throws an error when no king, idk what exception this would be
         print('Engine has thown an error getting an eval')
 
+    piece.snap_to_square()
+    piece.click = False
     game.add_board(new_board)
     new_board.print()
     print(new_board.get_fen(), end='\n\n')
