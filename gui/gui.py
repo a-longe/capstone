@@ -1,5 +1,6 @@
 #!/bin/python3
 
+from copy import deepcopy
 import pygame as pg
 import time
 import os
@@ -149,7 +150,7 @@ def on_mouse_down(game):
 def on_mouse_up(game) -> None:
     cur_board = game.get_current_board()
     piece = cur_board.get_clicked_piece()
-    if piece == -1: return # would like to make this nicer but will get back to it later
+    if piece == -1: return
     start_square = piece.square
     end_square = game.get_square_index(*pg.mouse.get_pos())
     move = (start_square, end_square)
@@ -526,13 +527,16 @@ class Board:
         '''
         Fix function to make it cleaner, one flow of execution, one return statement 
         match case?
-
-        Create new board repr to check if board is in check
         '''
         move = (piece.square, new_square)
-        is_valid = self.game.mouse_inside_bounds() and piece.square != new_square and \
-                    move in piece.get_valid_moves()
-        if not is_valid: return MoveEvalResponces.INVALID_MOVE
+        is_inside_bounds = self.game.is_inside_bounds(*pg.mouse.get_pos())
+        is_same_square = piece.square == new_square
+        is_in_valid_moves = move[MOVE_END] in [move[MOVE_END] for move in piece.get_valid_moves()]
+        is_valid = is_inside_bounds and not is_same_square and is_in_valid_moves
+        if not is_valid: 
+            print(move)
+            print(f"is_inside_bounds: {is_inside_bounds}, is_same_square: {is_same_square}, is_in_valid_moves: {is_in_valid_moves}")
+            return MoveEvalResponces.INVALID_MOVE
 
         if self.is_move_en_passent(move): return MoveEvalResponces.EN_PASSENT
         elif self.is_move_double_push(move): return MoveEvalResponces.DOUBLE_PUSH
@@ -549,6 +553,7 @@ class Board:
                 return MoveEvalResponces.CAPTURE_MOVE
         else:
             return MoveEvalResponces.MOVE_TO_EMPTY
+        print("error with eval_move, should never reach this case")
         return MoveEvalResponces.INVALID_MOVE
         
     def piece_map_to_board_input(self, piece_map:dict[int, 'Piece']) -> list[PiecePositionInput]:
@@ -596,7 +601,7 @@ class Board:
         return diff == 2
 
     def update_castling_rights(self, start_square, end_square) -> dict[str,bool]:
-        new_castling_rights = self.castling_rights
+        new_castling_rights = deepcopy(self.castling_rights)
         if self.is_move_castling((start_square, end_square)):
             # remove one colours castling rights
             castling_rights_to_change = ['k', 'q']
@@ -1040,8 +1045,11 @@ class Game:
         for move in piece.get_valid_moves():
             target_sqr = move[MOVE_END]
             board_after = board.get_board_after_move(piece, *move)
-            if board_after == -1 or not board_after.is_in_check(not board_after.is_white_turn):
-                legal_squares.append(target_sqr)
+            if board_after != -1: 
+                if not board_after.is_in_check(not board_after.is_white_turn):
+                    legal_squares.append(target_sqr)
+            else:
+                print(f"this board is not valid {move}")
         make_squares_blue(self.surface, self.square_size, legal_squares)
 
     def update_game(self) -> None:
