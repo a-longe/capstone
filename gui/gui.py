@@ -156,6 +156,7 @@ def on_mouse_up(game) -> None:
     
     new_board = cur_board.get_board_after_move(piece, start_square, end_square)
     if new_board == -1:
+        piece.click = False
         piece.return_to_previous()
         return
 
@@ -169,8 +170,8 @@ def on_mouse_up(game) -> None:
         # fix by moveing it back but will fix it better later
         # NOTE: the more i look at this the more i want to throw up 
         # cur_board.move(end_square, start_square)
-        piece.return_to_previous()
         piece.click = False
+        piece.return_to_previous()
         return
     
     try:
@@ -568,7 +569,6 @@ class Board:
     def is_move_double_push(self, move:Move):
         if type(self.piece_map[move[0]]) == Pawn:
             if abs(move[0] - move[1]) == 16:
-                print("double push")
                 return True
         return False
 
@@ -577,16 +577,13 @@ class Board:
         if type(piece) == Pawn:
             if (piece.is_white and piece.square < 32) or \
                 (not piece.is_white and piece.square >= 32):
-                    print(move[1], self.en_passent_target)
                     if move[1] == self.en_passent_target:
-                        print("en passent")
                         return True
         return False
 
     def is_move_castling(self, move:Move):
         if type(self.piece_map[move[0]]) == King:
             if abs(move[0] - move[1]) == 2:
-                print("castling")
                 return True
         return False
 
