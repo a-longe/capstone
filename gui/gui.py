@@ -10,8 +10,8 @@ from subprocess import Popen
 from random import randint
 from pprint import pprint, pformat
 
-sys.path.insert(0, "/home/alonge/Documents/code/capstone/python-chess")
-import uci_handler as engine
+import engine_handler as engine
+STOCKFISH_PATH = "/home/alonge/Documents/stockfish/stockfish/stockfish-ubuntu-x86-64-avx2"
 
 PiecePositionInput = tuple[int, int, int, str]
 PIECE_X = 0
@@ -174,15 +174,8 @@ def on_mouse_up(game) -> None:
         piece.click = False
         piece.return_to_previous()
         return
-    
-    try:
-        sf_eval_dump = engine.call_stockfish([f"ucinewgame",
-                                                f"position fen {new_board.get_fen()}",
-                                                "eval"])
-        sf_eval = engine.get_last_line_with_prefix(sf_eval_dump, 'Final evaluation').split()[2]
-        print(f"current board: {sf_eval}")
-    except: # throws an error when no king, idk what exception this would be
-        print('Engine has thown an error getting an eval')
+
+    print("eval:", game.engine.get_depth_zero_eval(new_board.get_fen()))
 
     piece.snap_to_square()
     piece.click = False
@@ -947,7 +940,7 @@ class Board:
 
 class Game:
     def __init__(self, starting_fen=STARTING_FEN) -> None:
-
+        self.engine = engine.Engine(STOCKFISH_PATH)
         self.square_size = 100
         self.top_left = 100
         self.bottom_right = self.top_left + (8 * self.square_size)
@@ -1124,6 +1117,7 @@ something, otherwise the operating system attempts the shut it down
 because it dosent think the program is doing anything then, we want
 the main loop (main()) to run every frame followed by updating pygame's
 display, not to be confused with updating the board or pieces.
+"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1"
 """
 
 fen_prompt = """
@@ -1137,14 +1131,14 @@ fen_prompt = """
     6 to test castling,
     7 to test promotion,
     8 for testing *legal* moves
-"""
+    """
 
 if __name__ == "__main__":
     os.environ['SDL_VIDEO_CENTERED'] = '1'
     pg.init()
     fen = test_fen_strings[int(input(fen_prompt))]
     print(fen)
-    game = Game(fen)
+    game = Game(fen) 
     MyClock = pg.time.Clock()
     while not game.is_game_over:
         main(game)
