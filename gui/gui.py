@@ -502,7 +502,7 @@ class Board:
         Fix function to make it cleaner, one flow of execution, one return statement 
         match case?
         '''
-        move = (piece.square, new_square)
+        move = (piece.square, new_square, "")
         is_inside_bounds = self.game.is_inside_bounds(*pg.mouse.get_pos())
         is_same_square = piece.square == new_square
         is_in_valid_moves = move[MOVE_END] in [move[MOVE_END] for move in piece.get_valid_moves()]
@@ -576,7 +576,7 @@ class Board:
     def update_castling_rights(self, move:Move) -> dict[str,bool]:
         start_square, end_square, promotion_glyph = move
         new_castling_rights = deepcopy(self.castling_rights)
-        if self.is_move_castling((start_square, end_square)):
+        if self.is_move_castling(move):
             # remove one colours castling rights
             castling_rights_to_change = ['k', 'q']
 
@@ -1038,30 +1038,15 @@ def main(game:Game) -> None:
 # the program easier to understand.
 def game_event_loop(game) -> None:
     # maybe add divergent path for engine input here?
-    if game.is_engine_turn():
-        board = game.get_current_board()
-        try:
-            best_move_str = engine.get_bestmove(board.get_fen(), 1000, '')
-            print(best_move_str)
-        except:
-            return
-        alg_start, alg_end = best_move_str[:2], best_move_str[2:]
-        start_square = algebraic_to_square(alg_start)
-        end_square = algebraic_to_square(alg_end)
-        move = (start_square, end_square, "")
-        piece = board.piece_map[start_square]
-        new_board = board.get_board_after_move(piece, move)
-        game.add_board(new_board)
-    else:
-        for event in pg.event.get():
-            if event.type == pg.MOUSEBUTTONDOWN:
-                print(pg.mouse.get_pos())
-                on_mouse_down(game)
-            elif event.type == pg.MOUSEBUTTONUP:
-                on_mouse_up(game)
-            elif event.type == pg.QUIT:
-                pg.quit()
-                sys.exit()
+    for event in pg.event.get():
+        if event.type == pg.MOUSEBUTTONDOWN:
+            print(pg.mouse.get_pos())
+            on_mouse_down(game)
+        elif event.type == pg.MOUSEBUTTONUP:
+            on_mouse_up(game)
+        elif event.type == pg.QUIT:
+            pg.quit()
+            sys.exit()
 
 
 RAND_FENS_PATH = '/home/alonge/Documents/code/capstone/engine/random_fens.txt'
