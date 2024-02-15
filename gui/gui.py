@@ -92,8 +92,8 @@ def blue_square(surface, image, rect):
 
 def make_squares_blue(surface, square_size, squares:list[int]) -> None:
     for square in squares:
-        x, y = my_divmod(square, 8)[1] * square_size + 100, my_divmod(square, 8)[0] * square_size + 100
-        rect = pg.Rect([x, y, 100, 100])
+        x, y = my_divmod(square, 8)[1] * square_size + square_size, my_divmod(square, 8)[0] * square_size + square_size
+        rect = pg.Rect([x, y, square_size, square_size])
         image = pg.Surface(rect.size).convert()
         blue_square(surface, image, rect)
 
@@ -206,8 +206,9 @@ def fen_to_pieces(fen, game) -> PiecePositionInput:
                 c_i += int(char) - 1
             else:
                 # convert c_i and r_i into square
-                lo_pieces.append((c_i * game.square_size + game.square_size,
-                                  r_i * game.square_size + game.square_size,
+                cords = (c_i * game.square_size + game.square_size,
+                        r_i * game.square_size + game.square_size,)
+                lo_pieces.append((*cords,
                                   game.square_size,
                                   char))
             c_i += 1
@@ -534,7 +535,8 @@ class Board:
         rect_size = self.game.square_size
         piece_pos_input = [] 
         for piece in pieces:
-            piece_pos_input.append((*self.game.get_cords_from_index(piece.square), rect_size, piece.glyph))
+            cords = self.game.get_cords_from_index(piece.square)
+            piece_pos_input.append((self.game.relative_board_cords(*cords), rect_size, piece.glyph))
         return piece_pos_input
 
     def is_move_promotion(self, move:Move) -> bool:
@@ -576,7 +578,7 @@ class Board:
     def update_castling_rights(self, move:Move) -> dict[str,bool]:
         start_square, end_square, promotion_glyph = move
         new_castling_rights = deepcopy(self.castling_rights)
-        if self.is_move_castling(move):
+        if self.is_move_castling((start_square, end_square)):
             # remove one colours castling rights
             castling_rights_to_change = ['k', 'q']
 
@@ -917,13 +919,14 @@ class Game:
     def __init__(self, starting_fen=STARTING_FEN) -> None:
         self.engine = engine.Engine(STOCKFISH_PATH)
         self.square_size = 100
-        self.top_left = 100
-        self.bottom_right = self.top_left + (8 * self.square_size)
-
-        square_cords_gen  = range(self.top_left, self.bottom_right, self.square_size)
-        self.square_cords = [[i, j] \
-            for i in square_cords_gen \
-            for j in square_cords_gen]
+        self.top_left = (200, 100)
+        self.bottom_right = (self.top_left[0] + (8 * self.square_size), self.top_left[1] + (8*self.square_size))
+        print("bottom right:", self.bottom_right)
+        square_cords_gen_x  = range(self.top_left[0], self.bottom_right[0], self.square_size)
+        print(list(square_cords_gen_x))
+        square_cords_gen_y = range(self.top_left[1], self.bottom_right[1], self.square_size)
+        print(list(square_cords_gen_y))
+        self.square_cords = [[i, j] for i in square_cords_gen_x for j in square_cords_gen_y]
         self.surface = pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         self.boards = [Board(self, *fen_to_board_input(starting_fen, self))]
         min_to_sec = lambda m : m * 60
@@ -948,14 +951,14 @@ class Game:
         self.display_blue = ~self.display_blue
 
     def is_inside_bounds(self, x, y) -> bool:
-        return (x >= self.top_left and x <= self.bottom_right and
-                y >= self.top_left and y <= self.bottom_right)
+        return (x >= self.top_left[0] and x <= self.bottom_right[0] and
+                y >= self.top_left[1] and y <= self.bottom_right[1])
 
     def mouse_inside_bounds(self) -> bool:
         return self.is_inside_bounds(*pg.mouse.get_pos())
 
     def relative_board_cords(self, x, y) -> Cord:
-        return (x-self.top_left, y-self.top_left)
+        return (x-self.top_left[0], y-self.top_left[1])
 
     def get_square_index(self, x, y) -> int:
         """
@@ -970,7 +973,7 @@ class Game:
         y, x  = divmod(index, 8)
         x *= self.square_size
         y *= self.square_size
-        return x + 100, y + 100
+        return self.relative_board_cords(x, y)
 
     def get_current_board(self) -> 'Board':
         return self.boards[-1]
@@ -980,9 +983,9 @@ class Game:
 
     def display_grid(self) -> None:
         for x, y in self.square_cords:
-            row = x / 100
-            column = y / 100
-            rect = pg.Rect([x, y, 100, 100])
+            row = x // self.square_size
+            column = y // self.square_size
+            rect = pg.Rect([x, y, self.square_size, self.square_size])
             image = pg.Surface(rect.size).convert()
             if not (is_odd(row) ^ is_odd(column)):
                 black_square(self.surface, image, rect)
@@ -1038,15 +1041,29 @@ def main(game:Game) -> None:
 # the program easier to understand.
 def game_event_loop(game) -> None:
     # maybe add divergent path for engine input here?
-    for event in pg.event.get():
-        if event.type == pg.MOUSEBUTTONDOWN:
-            print(pg.mouse.get_pos())
-            on_mouse_down(game)
-        elif event.type == pg.MOUSEBUTTONUP:
-            on_mouse_up(game)
-        elif event.type == pg.QUIT:
-            pg.quit()
-            sys.exit()
+    if game.is_engine_turn():
+        board = game.get_current_board()
+        try:
+            best_move_str = engine.get_bestmove(board.get_fen(), 1000, '')
+            print(best_move_str)
+        except:
+            return
+        alg_start, alg_end = best_move_str[:2], best_move_str[2:]
+        start_square = algebraic_to_square(alg_start)
+        end_square = algebraic_to_square(alg_end)
+        move = (start_square, end_square, "")
+        piece = board.piece_map[start_square]
+        new_board = board.get_board_after_move(piece, move)
+        game.add_board(new_board)
+    else:
+        for event in pg.event.get():
+            if event.type == pg.MOUSEBUTTONDOWN:
+                on_mouse_down(game)
+            elif event.type == pg.MOUSEBUTTONUP:
+                on_mouse_up(game)
+            elif event.type == pg.QUIT:
+                pg.quit()
+                sys.exit()
 
 
 RAND_FENS_PATH = '/home/alonge/Documents/code/capstone/engine/random_fens.txt'
