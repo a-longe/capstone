@@ -16,6 +16,15 @@ STOCKFISH_PATH = "/home/alonge/Documents/stockfish/stockfish/stockfish-ubuntu-x8
 SCREEN_WIDTH = 1600
 SCREEN_HEIGHT = 1080
 
+TIMER_WIDTH = 200
+TIMER_HEIGHT = 100
+TIMER_FONT_COLOR = (255, 255, 255)
+TIMER_FONT_SIZE = 100
+TIMER_X_OFFSET = 150
+TIMER_W_Y_OFFSET = 100
+TIMER_B_Y_OFFSET = 500
+TIMER_DECIMAL_PLACES = 1
+
 PiecePositionInput = tuple[int, int, int, str]
 PIECE_X = 0
 PIECE_Y = 1
@@ -173,10 +182,6 @@ def on_mouse_up(game) -> None:
         piece.click = False
         piece.return_to_previous()
         return
-
-    """
-    We're going to check if a move is legal her now instead of checking in eval_move
-    """
     
     if new_board.is_in_check(not new_board.is_white_turn):
         print('not a legal move')
@@ -188,11 +193,20 @@ def on_mouse_up(game) -> None:
         piece.return_to_previous()
         return
 
+    if end_square in cur_board.piece_map:
+        game.taken_pieces.append(cur_board.piece_map[end_square].glyph)
+
+    elif cur_board.is_move_en_passent(move):
+        enemy_pawn_glyph = 'p' if cur_board.is_white_turn else 'P'
+        game.taken_pieces.append(enemy_pawn_glyph)
+
     piece.snap_to_square()
     piece.click = False
     game.add_board(new_board)
     new_board.print()
     print(new_board.get_fen(), end='\n\n')
+    print(f"Time Remaining - White: {game.white_time}, Black: {game.black_time}")
+    print(f"Taken Pieces: {str(game.taken_pieces)}")
     
 def fen_to_pieces(fen, game) -> PiecePositionInput:
     lo_pieces = []
@@ -927,6 +941,8 @@ class Game:
         self.surface = pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         self.boards = [Board(self, *fen_to_board_input(starting_fen, self))]
         self.boards[0].print()
+        self.taken_pieces = []
+        self.last_update = time.time()
         min_to_sec = lambda m : m * 60
         self.white_time = min_to_sec(5)
         self.black_time = min_to_sec(5)
@@ -951,7 +967,6 @@ class Game:
     def is_inside_bounds(self, abs_x, abs_y) -> bool:
         return (self.top_left[0] <= abs_x <= self.bottom_right[0] and
                 self.top_left[1] <= abs_y <= self.bottom_right[1])
-
 
     def mouse_inside_bounds(self) -> bool:
         return self.is_inside_bounds(*pg.mouse.get_pos())
@@ -982,6 +997,31 @@ class Game:
 
     def add_board(self, board) -> None:
         self.boards.append(board)
+
+    def update_timer(self) -> None:
+        # subtract the difference between the last update and current time
+        # onto the current colors remaining time
+        cur_time = time.time()
+        delta_time = cur_time - self.last_update
+        if self.get_current_board().is_white_turn:
+            self.white_time -= delta_time
+        else:
+            self.black_time -= delta_time
+        
+        self.last_update = time.time()
+
+    def display_gui(self) -> None:
+        timer_font = pg.font.Font(None, TIMER_FONT_SIZE)
+        white_timer_rect = pg.Rect(self.bottom_right[0] + TIMER_X_OFFSET, self.top_left[1] + TIMER_W_Y_OFFSET, TIMER_WIDTH, TIMER_HEIGHT)
+        black_timer_rect = pg.Rect(self.bottom_right[0] + TIMER_X_OFFSET, self.top_left[1] + TIMER_B_Y_OFFSET, TIMER_WIDTH, TIMER_HEIGHT)
+        white_time_txt = timer_font.render(str(round(self.white_time, TIMER_DECIMAL_PLACES)), True, TIMER_FONT_COLOR)
+        black_time_txt = timer_font.render(str(round(self.black_time, TIMER_DECIMAL_PLACES)), True, TIMER_FONT_COLOR)
+        self.surface.blit(white_time_txt, white_timer_rect)
+        self.surface.blit(black_time_txt, black_timer_rect)
+        # update timers by setting font test to current timers
+        # display pieces taken
+        pass
+        
 
     def display_grid(self) -> None:
         for x, y in self.square_cords:
@@ -1026,6 +1066,8 @@ class Game:
     def update_game(self) -> None:
         self.clear_surface()
         self.display_grid()
+        self.update_timer()
+        self.display_gui()
         self.get_current_board().update_pieces()
 
 
