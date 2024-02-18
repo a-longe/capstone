@@ -90,9 +90,9 @@ def blue_square(surface, image, rect):
     image.fill((100, 100, 250))
     surface.blit(image, rect)
 
-def make_squares_blue(surface, square_size, squares:list[int]) -> None:
+def make_squares_blue(game, surface, square_size, squares:list[int]) -> None:
     for square in squares:
-        x, y = my_divmod(square, 8)[1] * square_size + square_size, my_divmod(square, 8)[0] * square_size + square_size
+        x, y = game.get_cords_from_index(square)
         rect = pg.Rect([x, y, square_size, square_size])
         image = pg.Surface(rect.size).convert()
         blue_square(surface, image, rect)
@@ -140,7 +140,7 @@ def get_piece_img(glyph:str) -> pg.Surface:
     return pg.image.load(os.path.join(IMAGE_DIR, f"{color}{piece_type}.png"))
 
 def on_mouse_down(game):
-    print(f"clicked on {game.get_square_index(*pg.mouse.get_pos())}")
+    print(f"is in: {game.is_inside_bounds(*pg.mouse.get_pos())}{game.get_square_index(*pg.mouse.get_pos())}, {pg.mouse.get_pos()} -> {game.relative_board_cords(*pg.mouse.get_pos())}")
     for piece in game.get_current_board().get_pieces():
         # The event positions is the mouse coordinates
         if piece.rect.collidepoint(pg.mouse.get_pos()) and \
@@ -274,7 +274,6 @@ class Piece:
     def get_valid_moves(self) -> list[Move]:
         print("ERROR: This piece has not been classified past being a piece")
         return [(self.square, self.square, "")]
-
 
     def snap_to_square(self) -> None:
         if self.board.game.mouse_inside_bounds():
@@ -460,13 +459,15 @@ class Board:
         move = (start_square, end_square)
         if start_square not in self.piece_map:
             self.print()
+        
+        piece = self.piece_map[start_square]
 
-        self.piece_map[end_square] = self.piece_map[start_square]
+        self.piece_map[end_square] = piece
         del self.piece_map[start_square]
          
         self.piece_map[end_square].rect.topleft = self.game.get_cords_from_index(end_square) 
 
-        self.piece_map[end_square].square  = self.piece_map[end_square].get_square_index()
+        self.piece_map[end_square].square  = self.game.get_square_index(*piece.rect[:2])
 
     def print(self) -> None:
         for square_index in range(64):
@@ -532,9 +533,8 @@ class Board:
         rect_size = self.game.square_size
         piece_pos_input = [] 
         for piece in pieces:
-            rel_cords = self.game.get_cords_from_index(piece.square)
-            cords = self.game.absolute_board_cords(*rel_cords)
-            piece_pos_input.append((*cords, rect_size, piece.glyph))
+            abs_cords = self.game.get_cords_from_index(piece.square)
+            piece_pos_input.append((*abs_cords, rect_size, piece.glyph))
         return piece_pos_input
 
     def is_move_promotion(self, move:Move) -> bool:
@@ -948,9 +948,10 @@ class Game:
     def toggle_blue(self) -> None:
         self.display_blue = ~self.display_blue
 
-    def is_inside_bounds(self, x, y) -> bool:
-        return (x >= self.top_left[0] and x <= self.bottom_right[0] and
-                y >= self.top_left[1] and y <= self.bottom_right[1])
+    def is_inside_bounds(self, abs_x, abs_y) -> bool:
+        return (self.top_left[0] <= abs_x <= self.bottom_right[0] and
+                self.top_left[1] <= abs_y <= self.bottom_right[1])
+
 
     def mouse_inside_bounds(self) -> bool:
         return self.is_inside_bounds(*pg.mouse.get_pos())
@@ -959,7 +960,7 @@ class Game:
         return (x-self.top_left[0], y-self.top_left[1])
 
     def absolute_board_cords(self, rel_x, rel_y) -> Cord:
-        return (rel_x+2*self.top_left[0], rel_y+2*self.top_left[1])
+        return (rel_x+self.top_left[0], rel_y+self.top_left[1])
 
     def get_square_index(self, x, y) -> int:
         """
@@ -971,10 +972,10 @@ class Game:
         return (y * 8) + x
 
     def get_cords_from_index(self, index:int) -> Cord:
-        y, x  = divmod(index, 8)
+        y, x = divmod(index, 8)
         x *= self.square_size
         y *= self.square_size
-        return self.relative_board_cords(x, y)
+        return self.absolute_board_cords(x, y)
 
     def get_current_board(self) -> 'Board':
         return self.boards[-1]
@@ -1020,7 +1021,7 @@ class Game:
                     legal_squares.append(target_sqr)
             else:
                 print(f"this board is not valid {move}")
-        make_squares_blue(self.surface, self.square_size, legal_squares)
+        make_squares_blue(self, self.surface, self.square_size, legal_squares)
 
     def update_game(self) -> None:
         self.clear_surface()
