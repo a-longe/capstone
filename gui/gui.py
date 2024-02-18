@@ -206,8 +206,8 @@ def fen_to_pieces(fen, game) -> PiecePositionInput:
                 c_i += int(char) - 1
             else:
                 # convert c_i and r_i into square
-                cords = (c_i * game.square_size + game.square_size,
-                        r_i * game.square_size + game.square_size,)
+                cords = (c_i * game.square_size + game.top_left[0],
+                        r_i * game.square_size + game.top_left[1],)
                 lo_pieces.append((*cords,
                                   game.square_size,
                                   char))
@@ -250,6 +250,9 @@ class Piece:
                                                                board.game.square_size))
         self.is_white = glyph.isupper()
 
+    def __repr__(self) -> str:
+        return f"Piece({self.glyph}, rect:{self.rect}, square:{self.square}, clicked:{self.click})"
+
     def update(self) -> None:
         if self.click:
             self.rect.center = pg.mouse.get_pos()
@@ -267,13 +270,6 @@ class Piece:
         its not the active colour
         """
         return self.is_white == self.board.is_white_turn
-
-    def get_square_index(self) -> int:
-        x, y = self.board.game.relative_board_cords(*self.rect[:2])
-        x //= self.board.game.square_size
-        y //= self.board.game.square_size
-        return (y * 8) + x
-
 
     def get_valid_moves(self) -> list[Move]:
         print("ERROR: This piece has not been classified past being a piece")
@@ -381,7 +377,6 @@ class Pawn(Piece):
                 self.board.piece_map[self.square] = Bishop(self.board, self.rect, glyph)
             case _:
                 print('Invalid Glyph:', glyph)
-                has_valid_glyph = False
 
     def get_valid_moves(self) -> list[Move]:
         valid_moves = []
@@ -463,6 +458,8 @@ class Board:
         # then take original location in map and delete
         # set self.square to new location
         move = (start_square, end_square)
+        if start_square not in self.piece_map:
+            self.print()
 
         self.piece_map[end_square] = self.piece_map[start_square]
         del self.piece_map[start_square]
@@ -535,8 +532,9 @@ class Board:
         rect_size = self.game.square_size
         piece_pos_input = [] 
         for piece in pieces:
-            cords = self.game.get_cords_from_index(piece.square)
-            piece_pos_input.append((self.game.relative_board_cords(*cords), rect_size, piece.glyph))
+            rel_cords = self.game.get_cords_from_index(piece.square)
+            cords = self.game.absolute_board_cords(*rel_cords)
+            piece_pos_input.append((*cords, rect_size, piece.glyph))
         return piece_pos_input
 
     def is_move_promotion(self, move:Move) -> bool:
@@ -848,6 +846,8 @@ class Board:
 
 
     def get_sliding_moves(self, start_square, offset:tuple[int, int], max_depth=8) -> list[Move]:
+        if start_square not in self.piece_map:
+            self.print()
         depth = 1
         valid_moves = []
         while not will_move_out(start_square, multiply_in_tuple(offset, depth)) and depth<=max_depth:
@@ -921,14 +921,12 @@ class Game:
         self.square_size = 100
         self.top_left = (200, 100)
         self.bottom_right = (self.top_left[0] + (8 * self.square_size), self.top_left[1] + (8*self.square_size))
-        print("bottom right:", self.bottom_right)
         square_cords_gen_x  = range(self.top_left[0], self.bottom_right[0], self.square_size)
-        print(list(square_cords_gen_x))
         square_cords_gen_y = range(self.top_left[1], self.bottom_right[1], self.square_size)
-        print(list(square_cords_gen_y))
         self.square_cords = [[i, j] for i in square_cords_gen_x for j in square_cords_gen_y]
         self.surface = pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         self.boards = [Board(self, *fen_to_board_input(starting_fen, self))]
+        self.boards[0].print()
         min_to_sec = lambda m : m * 60
         self.white_time = min_to_sec(5)
         self.black_time = min_to_sec(5)
@@ -959,6 +957,9 @@ class Game:
 
     def relative_board_cords(self, x, y) -> Cord:
         return (x-self.top_left[0], y-self.top_left[1])
+
+    def absolute_board_cords(self, rel_x, rel_y) -> Cord:
+        return (rel_x+2*self.top_left[0], rel_y+2*self.top_left[1])
 
     def get_square_index(self, x, y) -> int:
         """
