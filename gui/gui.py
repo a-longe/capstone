@@ -192,13 +192,21 @@ def on_mouse_up(game) -> None:
         piece.click = False
         piece.return_to_previous()
         return
-
+    
     if end_square in cur_board.piece_map:
-        game.taken_pieces.append(cur_board.piece_map[end_square].glyph)
+        taken_piece = cur_board.piece_map[end_square]
+        if taken_piece.is_white:
+            game.white_taken_pieces.append(taken_piece.glyph)
+        else:
+            game.black_taken_pieces.append(taken_piece.glyph)
 
     elif cur_board.is_move_en_passent(move):
         enemy_pawn_glyph = 'p' if cur_board.is_white_turn else 'P'
-        game.taken_pieces.append(enemy_pawn_glyph)
+        if cur_board.is_white_turn:
+            game.black_taken_pieces.append('p')
+        else:
+            game.white_taken_pieces.append('P')
+        
 
     piece.snap_to_square()
     piece.click = False
@@ -206,7 +214,7 @@ def on_mouse_up(game) -> None:
     new_board.print()
     print(new_board.get_fen(), end='\n\n')
     print(f"Time Remaining - White: {game.white_time}, Black: {game.black_time}")
-    print(f"Taken Pieces: {str(game.taken_pieces)}")
+    print(f"Taken Pieces - White Pieces: {game.white_taken_pieces}, Black Pieces: {game.black_taken_pieces}")
     
 def fen_to_pieces(fen, game) -> PiecePositionInput:
     lo_pieces = []
@@ -941,7 +949,8 @@ class Game:
         self.surface = pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         self.boards = [Board(self, *fen_to_board_input(starting_fen, self))]
         self.boards[0].print()
-        self.taken_pieces = []
+        self.white_taken_pieces = []
+        self.black_taken_pieces = []
         self.last_update = time.time()
         min_to_sec = lambda m : m * 60
         self.white_time = min_to_sec(5)
