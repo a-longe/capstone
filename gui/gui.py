@@ -21,8 +21,8 @@ TIMER_HEIGHT = 100
 TIMER_FONT_COLOR = (255, 255, 255)
 TIMER_FONT_SIZE = 100
 TIMER_X_OFFSET = 150
-TIMER_W_Y_OFFSET = 100
-TIMER_B_Y_OFFSET = 500
+TIMER_W_Y_OFFSET = 500
+TIMER_B_Y_OFFSET = 100
 TIMER_DECIMAL_PLACES = 1
 
 PiecePositionInput = tuple[int, int, int, str]
@@ -1020,6 +1020,7 @@ class Game:
         self.last_update = time.time()
 
     def display_gui(self) -> None:
+        # update timers by setting font test to current timers
         timer_font = pg.font.Font(None, TIMER_FONT_SIZE)
         white_timer_rect = pg.Rect(self.bottom_right[0] + TIMER_X_OFFSET, self.top_left[1] + TIMER_W_Y_OFFSET, TIMER_WIDTH, TIMER_HEIGHT)
         black_timer_rect = pg.Rect(self.bottom_right[0] + TIMER_X_OFFSET, self.top_left[1] + TIMER_B_Y_OFFSET, TIMER_WIDTH, TIMER_HEIGHT)
@@ -1027,9 +1028,29 @@ class Game:
         black_time_txt = timer_font.render(str(round(self.black_time, TIMER_DECIMAL_PLACES)), True, TIMER_FONT_COLOR)
         self.surface.blit(white_time_txt, white_timer_rect)
         self.surface.blit(black_time_txt, black_timer_rect)
-        # update timers by setting font test to current timers
+
         # display pieces taken
-        pass
+        TAKEN_PIECE_DISPLAY_INIT_X_OFFSET = 150 
+        TAKEN_PIECE_DISPLAY_W_Y_OFFSET = 700 
+        TAKEN_PIECE_DISPLAY_B_Y_OFFSET = 900
+        TAKEN_PIECE_DISPLAY_IMG_SIZE = 20
+        white_display_counter = 0
+        for white_taken_glyph in self.white_taken_pieces:
+            img = get_piece_img(white_taken_glyph)
+            pg.transform.scale(img, (TAKEN_PIECE_DISPLAY_W_Y_OFFSET, TAKEN_PIECE_DISPLAY_IMG_SIZE))
+            self.surface.blit(img, pg.Rect(TAKEN_PIECE_DISPLAY_INIT_X_OFFSET + (10*white_display_counter),
+                                           TAKEN_PIECE_DISPLAY_W_Y_OFFSET,
+                                           TAKEN_PIECE_DISPLAY_IMG_SIZE, TAKEN_PIECE_DISPLAY_IMG_SIZE))
+            white_display_counter += 1
+
+        black_display_counter = 0
+        for black_taken_glyph in self.black_taken_pieces:
+            img = get_piece_img(black_taken_glyph)
+            pg.transform.scale(img, (TAKEN_PIECE_DISPLAY_IMG_SIZE, TAKEN_PIECE_DISPLAY_IMG_SIZE))
+            self.surface.blit(img, pg.Rect(TAKEN_PIECE_DISPLAY_INIT_X_OFFSET + (10*white_display_counter),
+                                           TAKEN_PIECE_DISPLAY_B_Y_OFFSET,
+                                           TAKEN_PIECE_DISPLAY_IMG_SIZE, TAKEN_PIECE_DISPLAY_IMG_SIZE))
+            black_display_counter += 1
         
 
     def display_grid(self) -> None:
@@ -1055,7 +1076,7 @@ class Game:
         if self.display_blue: self.display_blue_squares()
 
     def clear_surface(self) -> None:
-        self.surface.fill(0)
+        self.surface.fill((20, 20, 20))
 
     def display_blue_squares(self) -> None:
         board = self.get_current_board()
