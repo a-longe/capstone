@@ -16,6 +16,12 @@ STOCKFISH_PATH = "/home/alonge/Documents/stockfish/stockfish/stockfish-ubuntu-x8
 SCREEN_WIDTH = 1600
 SCREEN_HEIGHT = 1080
 
+TAKEN_PIECE_DISPLAY_INIT_X_OFFSET = 150 
+TAKEN_PIECE_DISPLAY_W_Y_OFFSET = 200 
+TAKEN_PIECE_DISPLAY_B_Y_OFFSET = 400
+TAKEN_PIECE_DISPLAY_IMG_SIZE = 20
+TAKEN_PIECE_DISPLAY_OFFSET_BETWEEN_PIECES = 20
+
 TIMER_WIDTH = 200
 TIMER_HEIGHT = 100
 TIMER_FONT_COLOR = (255, 255, 255)
@@ -1024,17 +1030,14 @@ class Game:
         timer_font = pg.font.Font(None, TIMER_FONT_SIZE)
         white_timer_rect = pg.Rect(self.bottom_right[0] + TIMER_X_OFFSET, self.top_left[1] + TIMER_W_Y_OFFSET, TIMER_WIDTH, TIMER_HEIGHT)
         black_timer_rect = pg.Rect(self.bottom_right[0] + TIMER_X_OFFSET, self.top_left[1] + TIMER_B_Y_OFFSET, TIMER_WIDTH, TIMER_HEIGHT)
-        white_time_txt = timer_font.render(str(round(self.white_time, TIMER_DECIMAL_PLACES)), True, TIMER_FONT_COLOR)
-        black_time_txt = timer_font.render(str(round(self.black_time, TIMER_DECIMAL_PLACES)), True, TIMER_FONT_COLOR)
+        white_time_min, white_time_sec = divmod(self.white_time, 60)
+        black_time_min, black_time_sec = divmod(self.black_time, 60)
+        white_time_txt = timer_font.render(f"{white_time_min:.0f}:{white_time_sec:.1f}", True, TIMER_FONT_COLOR)
+        black_time_txt = timer_font.render(f"{black_time_min:.0f}:{black_time_sec:.1f}", True, TIMER_FONT_COLOR)
         self.surface.blit(white_time_txt, white_timer_rect)
         self.surface.blit(black_time_txt, black_timer_rect)
 
         # display pieces taken
-        TAKEN_PIECE_DISPLAY_INIT_X_OFFSET = 150 
-        TAKEN_PIECE_DISPLAY_W_Y_OFFSET = 200 
-        TAKEN_PIECE_DISPLAY_B_Y_OFFSET = 400
-        TAKEN_PIECE_DISPLAY_IMG_SIZE = 20
-        TAKEN_PIECE_DISPLAY_OFFSET_BETWEEN_PIECES = 20
         white_display_counter = 0
         for white_taken_glyph in self.white_taken_pieces:
             img = get_piece_img(white_taken_glyph)
