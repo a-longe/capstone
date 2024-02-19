@@ -1031,15 +1031,16 @@ class Game:
 
         # display pieces taken
         TAKEN_PIECE_DISPLAY_INIT_X_OFFSET = 150 
-        TAKEN_PIECE_DISPLAY_W_Y_OFFSET = 700 
-        TAKEN_PIECE_DISPLAY_B_Y_OFFSET = 900
+        TAKEN_PIECE_DISPLAY_W_Y_OFFSET = 200 
+        TAKEN_PIECE_DISPLAY_B_Y_OFFSET = 400
         TAKEN_PIECE_DISPLAY_IMG_SIZE = 20
+        TAKEN_PIECE_DISPLAY_OFFSET_BETWEEN_PIECES = 20
         white_display_counter = 0
         for white_taken_glyph in self.white_taken_pieces:
             img = get_piece_img(white_taken_glyph)
-            pg.transform.scale(img, (TAKEN_PIECE_DISPLAY_W_Y_OFFSET, TAKEN_PIECE_DISPLAY_IMG_SIZE))
-            self.surface.blit(img, pg.Rect(TAKEN_PIECE_DISPLAY_INIT_X_OFFSET + (10*white_display_counter),
-                                           TAKEN_PIECE_DISPLAY_W_Y_OFFSET,
+            pg.transform.scale(img, (TAKEN_PIECE_DISPLAY_IMG_SIZE, TAKEN_PIECE_DISPLAY_IMG_SIZE))
+            self.surface.blit(img, pg.Rect(self.bottom_right[0] + TAKEN_PIECE_DISPLAY_INIT_X_OFFSET + (TAKEN_PIECE_DISPLAY_OFFSET_BETWEEN_PIECES*white_display_counter),
+                                           self.top_left[1] + TAKEN_PIECE_DISPLAY_W_Y_OFFSET,
                                            TAKEN_PIECE_DISPLAY_IMG_SIZE, TAKEN_PIECE_DISPLAY_IMG_SIZE))
             white_display_counter += 1
 
@@ -1047,8 +1048,8 @@ class Game:
         for black_taken_glyph in self.black_taken_pieces:
             img = get_piece_img(black_taken_glyph)
             pg.transform.scale(img, (TAKEN_PIECE_DISPLAY_IMG_SIZE, TAKEN_PIECE_DISPLAY_IMG_SIZE))
-            self.surface.blit(img, pg.Rect(TAKEN_PIECE_DISPLAY_INIT_X_OFFSET + (10*white_display_counter),
-                                           TAKEN_PIECE_DISPLAY_B_Y_OFFSET,
+            self.surface.blit(img, pg.Rect(self.bottom_right[0] + TAKEN_PIECE_DISPLAY_INIT_X_OFFSET + (TAKEN_PIECE_DISPLAY_OFFSET_BETWEEN_PIECES*black_display_counter),
+                                           self.top_left[1] + TAKEN_PIECE_DISPLAY_B_Y_OFFSET,
                                            TAKEN_PIECE_DISPLAY_IMG_SIZE, TAKEN_PIECE_DISPLAY_IMG_SIZE))
             black_display_counter += 1
         
