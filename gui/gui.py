@@ -1267,10 +1267,10 @@ class Game:
         white_time_min, white_time_sec = divmod(self.white_time, 60)
         black_time_min, black_time_sec = divmod(self.black_time, 60)
         white_time_txt = timer_font.render(
-            f"{white_time_min:.0f}:{white_time_sec:.1f}", True, TIMER_FONT_COLOR
+            f"{white_time_min:.0f}:{white_time_sec:0>4.1f}", True, TIMER_FONT_COLOR
         )
         black_time_txt = timer_font.render(
-            f"{black_time_min:.0f}:{black_time_sec:.1f}", True, TIMER_FONT_COLOR
+            f"{black_time_min:.0f}:{black_time_sec:0>4.1f}", True, TIMER_FONT_COLOR
         )
         self.surface.blit(white_time_txt, white_timer_rect)
         self.surface.blit(black_time_txt, black_timer_rect)
