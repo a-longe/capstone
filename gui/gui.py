@@ -638,8 +638,6 @@ class Board:
         is_in_valid_moves = move[MOVE_END] in [
             move[MOVE_END] for move in piece.get_valid_moves()
         ]
-        if move == (11, 3, ""):
-            print(is_same_square, is_in_valid_moves)
         is_valid = not is_same_square and is_in_valid_moves
         if not is_valid:
             print(move)
@@ -678,21 +676,21 @@ class Board:
         return piece_pos_input
 
     def is_move_promotion(self, move: Move) -> bool:
-        if type(self.piece_map[move[MOVE_START]]) == Pawn:
+        if type(self.piece_map[move[MOVE_START]]) is Pawn:
             end_row = 0 if self.piece_map[move[MOVE_START]].is_white else 7
             move_to_row = divmod(move[MOVE_END], 8)[MOVE_START]
             return move_to_row == end_row
         return False
 
     def is_move_double_push(self, move: Move):
-        if type(self.piece_map[move[MOVE_START]]) == Pawn:
+        if type(self.piece_map[move[MOVE_START]]) is Pawn:
             if abs(move[MOVE_START] - move[MOVE_END]) == 16:
                 return True
         return False
 
     def is_move_en_passent(self, move: Move):
         piece = self.piece_map[move[MOVE_START]]
-        if type(piece) == Pawn:
+        if type(piece) is Pawn:
             if (piece.is_white and piece.square < 32) or (
                 not piece.is_white and piece.square >= 32
             ):
@@ -701,7 +699,7 @@ class Board:
         return False
 
     def is_move_castling(self, move: Move):
-        if type(self.piece_map[move[MOVE_START]]) == King:
+        if type(self.piece_map[move[MOVE_START]]) is King:
             if abs(move[MOVE_START] - move[MOVE_END]) == 2:
                 return True
         return False
@@ -726,7 +724,7 @@ class Board:
                     cr_to_chg = cr_to_chg.upper()
                 new_castling_rights[cr_to_chg] = False
 
-        elif type(self.piece_map[start_square]) == Rook:
+        elif type(self.piece_map[start_square]) is Rook:
             match start_square:
                 case 0:
                     new_castling_rights["q"] = False
@@ -737,7 +735,7 @@ class Board:
                 case 63:
                     new_castling_rights["K"] = False
 
-        elif type(self.piece_map[start_square]) == King:
+        elif type(self.piece_map[start_square]) is King:
             if self.piece_map[start_square].is_white:
                 new_castling_rights["K"] = False
                 new_castling_rights["Q"] = False
@@ -759,7 +757,7 @@ class Board:
 
     def get_board_after_halfmove(self, move: Move) -> "Board":
         start_square, end_square, promotion_glyph = move
-        if type(self.piece_map[start_square]) == Pawn:
+        if type(self.piece_map[start_square]) is Pawn:
             new_halfmove_count = 0
         else:
             new_halfmove_count = self.halfmove_count + 1
@@ -1133,6 +1131,8 @@ class Game:
         self.square_cords = [
             [i, j] for i in square_cords_gen_x for j in square_cords_gen_y
         ]
+        self.white_prom_start = self.top_left[0], self.top_left[1] - 1.5 * self.square_size
+        self.black_prom_start = self.top_left[0], self.top_left[1] + (7*self.square_size)
         self.surface = pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         self.boards = [Board(self, *fen_to_board_input(starting_fen, self))]
         self.boards[0].print()
@@ -1207,7 +1207,10 @@ class Game:
 
     def get_promotion_query_rects(self) -> list[tuple[str, pg.Rect]]:
         rects = []
-        promotion_query_cords = (100, 100) if self.is_white_promoting else (500, 500)
+        promotion_query_cords = (self.white_prom_start
+                                 if self.is_white_promoting
+                                 else self.black_prom_start)
+
         promotion_pieces = (
             WHITE_PROMOTION_PIECES
             if self.is_white_promoting
@@ -1215,7 +1218,7 @@ class Game:
         )
         for count, piece_glyph in enumerate(promotion_pieces):
             abs_cords = add_tuples(
-                promotion_query_cords, (self.square_size * count, self.square_size)
+                promotion_query_cords, (50 * count, self.square_size)
             )
             rect = pg.Rect(*abs_cords, self.square_size, self.square_size)
             rects.append((piece_glyph, rect))
