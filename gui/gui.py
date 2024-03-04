@@ -38,6 +38,12 @@ PIECE_Y = 1
 PIECE_SIZE = 2  # do not need width and height as pieces are square images
 PIECE_GLYPH = 3
 
+# These are all relative to white
+LOSS = 0
+WIN = 1
+DRAW = 2
+CONTINUE = 3
+
 DIVMOD_ROW = 0
 DIVMOD_COLUMN = 1
 
@@ -261,15 +267,13 @@ def on_mouse_up(game) -> None:
 
         piece.snap_to_square()
         piece.click = False
-
+    print(new_board.is_white_turn, new_board.get_all_valid_moves())
+    print(new_board.deterimine_board_state())
     game.add_board(new_board)
     print("board: ", new_board)
     new_board.print()
     print(new_board.get_fen(), end="\n\n")
     print(f"Time Remaining - White: {game.white_time}, Black: {game.black_time}")
-    print(
-        f"Taken Pieces - White Pieces: {game.white_taken_pieces}, Black Pieces: {game.black_taken_pieces}"
-    )
 
 
 def fen_to_pieces(fen, game) -> PiecePositionInput:
@@ -640,7 +644,6 @@ class Board:
         ]
         is_valid = not is_same_square and is_in_valid_moves
         if not is_valid:
-            print(move)
             return MoveEvalResponces.INVALID_MOVE
 
         if self.is_move_en_passent(move):
@@ -1102,6 +1105,36 @@ class Board:
     def get_pieces(self) -> list[Piece]:
         return self.piece_map.values()
 
+    def is_move_white(self, move:Move) -> bool:
+        return self.piece_map[move[MOVE_START]].is_white
+
+    def is_move_black(self, move:Move) -> bool:
+        return not self.piece_map[move[MOVE_START]].is_white
+
+    def deterimine_board_state(self) -> int:
+        all_valid = self.get_all_valid_moves()
+        all_valid_targets = [move[MOVE_END] for move in all_valid]
+        all_legal = [move for move in all_valid if move[MOVE_END] not in all_valid_targets]
+        white_valid = list(filter(self.is_move_white, all_legal))
+        black_valid = list(filter(self.is_move_black, all_legal))
+        if self.is_white_turn:
+            if not white_valid:
+                if self.is_in_check(True):
+                    # white loses
+                    return LOSS
+                else:
+                    # draw
+                    return DRAW
+        else:
+            # blacks turn
+            if not black_valid:
+                if self.is_in_check(False):
+                    # white wins
+                    return WIN
+                else:
+                    return DRAW
+        return CONTINUE
+
     def switch_is_white_turn(self) -> bool:
         return not self.is_white_turn
 
@@ -1436,6 +1469,7 @@ test_fen_strings = [
     "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1",
     "8/3P4/8/K7/7k/8/4p3/8 w - - 0 1",
     "8/R3k3/7b/8/8/3R4/3K4/8 w - - 0 1",
+    "2k5/7R/2K5/8/8/8/8/8 w - - 7 9"
 ]
 
 """
