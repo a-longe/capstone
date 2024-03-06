@@ -1,5 +1,6 @@
 #!/bin/python3
 
+from pprint import pprint
 from copy import deepcopy
 import math
 import os
@@ -39,6 +40,12 @@ PIECE_SIZE = 2  # do not need width and height as pieces are square images
 PIECE_GLYPH = 3
 
 # These are all relative to white
+BOARD_STATE_TABLE = {
+        0: "Loss",
+        1: "Win",
+        2: "Draw",
+        3: "Continue"
+    }
 LOSS = 0
 WIN = 1
 DRAW = 2
@@ -189,7 +196,6 @@ def on_mouse_down(game):
         # The event positions is the mouse coordinates
         if piece.rect.collidepoint(pg.mouse.get_pos()) and piece.can_pickup():
             valid_targets = [move[MOVE_END] for move in piece.get_valid_moves()]
-            print(piece, valid_targets)
             # store current center
             piece.previous_center = piece.rect.center
             piece.click = True
@@ -198,16 +204,13 @@ def on_mouse_down(game):
 def on_mouse_up(game) -> None:
     cur_board = game.get_current_board()
     if game.is_promoting():
-        print(pg.mouse.get_pos())
         selected_promotion = game.get_selected_promotion_option()
         if selected_promotion != "":
             game.is_black_promoting = False
             game.is_white_promoting = False
             move = *game.attempted_promotion[:MOVE_PROMOTION], selected_promotion
             piece = cur_board.piece_map[move[MOVE_START]]
-            print(move)
             new_board = cur_board.get_board_after_move(piece, move)
-            print("new board in promotion branch", new_board)
         else:
             return
     else:
@@ -229,8 +232,6 @@ def on_mouse_up(game) -> None:
             return
 
         new_board = cur_board.get_board_after_move(piece, move)
-
-        print(new_board, piece, move)
 
         if new_board.is_in_check(not new_board.is_white_turn):
             print("not a legal move")
@@ -267,10 +268,9 @@ def on_mouse_up(game) -> None:
 
         piece.snap_to_square()
         piece.click = False
-    print(new_board.is_white_turn, new_board.get_all_valid_moves())
-    print(new_board.deterimine_board_state())
+
+    print("Board State:", BOARD_STATE_TABLE[new_board.get_board_state()])
     game.add_board(new_board)
-    print("board: ", new_board)
     new_board.print()
     print(new_board.get_fen(), end="\n\n")
     print(f"Time Remaining - White: {game.white_time}, Black: {game.black_time}")
@@ -659,7 +659,7 @@ class Board:
                 return MoveEvalResponces.CASTLE_QUEENSIDE
 
         if new_square in self.piece_map.keys():
-            piece_to_take = game.get_current_board().piece_map[new_square]
+            piece_to_take = self.piece_map[new_square]
             if not piece.is_same_colour(piece_to_take):
                 return MoveEvalResponces.CAPTURE_MOVE
         else:
@@ -1111,14 +1111,20 @@ class Board:
     def is_move_black(self, move:Move) -> bool:
         return not self.piece_map[move[MOVE_START]].is_white
 
-    def deterimine_board_state(self) -> int:
+    def get_board_state(self) -> int:
         all_valid = self.get_all_valid_moves()
-        all_valid_targets = [move[MOVE_END] for move in all_valid]
-        all_legal = [move for move in all_valid if move[MOVE_END] not in all_valid_targets]
-        white_valid = list(filter(self.is_move_white, all_legal))
-        black_valid = list(filter(self.is_move_black, all_legal))
+        all_legal = []
+
+        for move in all_valid:
+            piece = self.piece_map[move[MOVE_START]]
+            new_board = self.get_board_after_move(piece, move)
+            if not new_board.is_in_check(self.is_white_turn):
+                all_legal.append(move)
+
+        white_legal = list(filter(self.is_move_white, all_legal))
+        black_legal = list(filter(self.is_move_black, all_legal))
         if self.is_white_turn:
-            if not white_valid:
+            if not white_legal:
                 if self.is_in_check(True):
                     # white loses
                     return LOSS
@@ -1127,7 +1133,7 @@ class Board:
                     return DRAW
         else:
             # blacks turn
-            if not black_valid:
+            if not black_legal:
                 if self.is_in_check(False):
                     # white wins
                     return WIN
@@ -1469,7 +1475,7 @@ test_fen_strings = [
     "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1",
     "8/3P4/8/K7/7k/8/4p3/8 w - - 0 1",
     "8/R3k3/7b/8/8/3R4/3K4/8 w - - 0 1",
-    "2k5/7R/2K5/8/8/8/8/8 w - - 7 9"
+    "k7/8/PP5/K7/8/8/8/8 w - - 7 9"
 ]
 
 """
@@ -1494,7 +1500,8 @@ fen_prompt = """
     5 is a en passent test,
     6 to test castling,
     7 to test promotion,
-    8 for testing *legal* moves
+    8 for testing *legal* moves,
+    9 for end game testing
     """
 
 if __name__ == "__main__":
