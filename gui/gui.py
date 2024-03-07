@@ -1,6 +1,5 @@
 #!/bin/python3
 
-from pprint import pprint
 from copy import deepcopy
 import math
 import os
@@ -269,7 +268,9 @@ def on_mouse_up(game) -> None:
         piece.snap_to_square()
         piece.click = False
 
-    print("Board State:", BOARD_STATE_TABLE[new_board.get_board_state()])
+    if new_board.get_board_state() != CONTINUE:
+        print("Board State:", BOARD_STATE_TABLE[new_board.get_board_state()])
+        game.is_game_over = True
     game.add_board(new_board)
     new_board.print()
     print(new_board.get_fen(), end="\n\n")
@@ -1430,29 +1431,32 @@ def main(game: Game) -> None:
 # the program easier to understand.
 def game_event_loop(game) -> None:
     # maybe add divergent path for engine input here?
-    if game.is_engine_turn():
-        board = game.get_current_board()
-        try:
-            best_move_str = engine.get_bestmove(board.get_fen(), 1000, "")
-            print(best_move_str)
-        except:  # do not know how to define stockfish crash as exp.
-            return
-        alg_start, alg_end = best_move_str[:2], best_move_str[2:]
-        start_square = algebraic_to_square(alg_start)
-        end_square = algebraic_to_square(alg_end)
-        move = (start_square, end_square, "")
-        piece = board.piece_map[start_square]
-        new_board = board.get_board_after_move(piece, move)
-        game.add_board(new_board)
+    if not game.is_game_over:
+        if game.is_engine_turn():
+            board = game.get_current_board()
+            try:
+                best_move_str = engine.get_bestmove(board.get_fen(), 1000, "")
+                print(best_move_str)
+            except:  # do not know how to define stockfish crash as exp.
+                return
+            alg_start, alg_end = best_move_str[:2], best_move_str[2:]
+            start_square = algebraic_to_square(alg_start)
+            end_square = algebraic_to_square(alg_end)
+            move = (start_square, end_square, "")
+            piece = board.piece_map[start_square]
+            new_board = board.get_board_after_move(piece, move)
+            game.add_board(new_board)
+        else:
+            for event in pg.event.get():
+                if event.type == pg.MOUSEBUTTONDOWN:
+                    on_mouse_down(game)
+                elif event.type == pg.MOUSEBUTTONUP:
+                    on_mouse_up(game)
+                elif event.type == pg.QUIT:
+                    pg.quit()
+                    sys.exit()
     else:
-        for event in pg.event.get():
-            if event.type == pg.MOUSEBUTTONDOWN:
-                on_mouse_down(game)
-            elif event.type == pg.MOUSEBUTTONUP:
-                on_mouse_up(game)
-            elif event.type == pg.QUIT:
-                pg.quit()
-                sys.exit()
+        print(BOARD_STATE_TABLE[game.get_current_board().get_board_state()])
 
 
 RAND_FENS_PATH = "/home/alonge/Documents/code/capstone/engine/random_fens.txt"
@@ -1511,7 +1515,7 @@ if __name__ == "__main__":
     print(fen)
     game = Game(fen)
     MyClock = pg.time.Clock()
-    while not game.is_game_over:
+    while True:
         main(game)
         pg.display.update()
         MyClock.tick(60)
