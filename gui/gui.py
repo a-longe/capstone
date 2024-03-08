@@ -38,17 +38,19 @@ PIECE_Y = 1
 PIECE_SIZE = 2  # do not need width and height as pieces are square images
 PIECE_GLYPH = 3
 
+
 # These are all relative to white
-BOARD_STATE_TABLE = {
-        0: "Loss",
-        1: "Win",
-        2: "Draw",
-        3: "Continue"
-    }
-LOSS = 0
-WIN = 1
-DRAW = 2
-CONTINUE = 3
+class GameState:
+    BOARD_STATE_TABLE = {
+            0: "Loss",
+            1: "Win",
+            2: "Draw",
+            3: "Continue"
+        }
+    LOSS = 0
+    WIN = 1
+    DRAW = 2
+    CONTINUE = 3
 
 DIVMOD_ROW = 0
 DIVMOD_COLUMN = 1
@@ -268,8 +270,8 @@ def on_mouse_up(game) -> None:
         piece.snap_to_square()
         piece.click = False
 
-    if new_board.get_board_state() != CONTINUE:
-        print("Board State:", BOARD_STATE_TABLE[new_board.get_board_state()])
+    if new_board.get_board_state() != GameState.CONTINUE:
+        print("Board State:", GameState.BOARD_STATE_TABLE[new_board.get_board_state()])
         game.is_game_over = True
     game.add_board(new_board)
     new_board.print()
@@ -1128,19 +1130,19 @@ class Board:
             if not white_legal:
                 if self.is_in_check(True):
                     # white loses
-                    return LOSS
+                    return GameState.LOSS
                 else:
                     # draw
-                    return DRAW
+                    return GameState.DRAW
         else:
             # blacks turn
             if not black_legal:
                 if self.is_in_check(False):
                     # white wins
-                    return WIN
+                    return GameState.WIN
                 else:
-                    return DRAW
-        return CONTINUE
+                    return GameState.DRAW
+        return GameState.CONTINUE
 
     def switch_is_white_turn(self) -> bool:
         return not self.is_white_turn
@@ -1363,6 +1365,25 @@ class Game:
         if self.is_white_promoting or self.is_black_promoting:
             self.display_promotion_query()
 
+    def display_game_end(self) -> None:
+        x: int = SCREEN_WIDTH // 2
+        y: int = SCREEN_HEIGHT // 2
+        WIDTH = 200
+        HEIGHT = 40
+        game_state = GameState.BOARD_STATE_TABLE[self.get_current_board().get_board_state()]
+        game_end_msg = ""
+        match game_state:
+            case GameState.WIN: game_end_msg = "White Wins",
+            case GameState.LOSS: game_end_msg = "Black Wins",
+            case GameState.DRAW: game_end_msg = "Draw"
+        font = pg.font.Font(None, 32)
+        font_color = (255, 255, 255)
+        font_img = font.render(game_end_msg, True, font_color)
+        self.surface.blit(font_img, 
+                          pg.Rect(x - (WIDTH//2), y-(HEIGHT//2),
+                                  WIDTH, HEIGHT))
+
+
     def display_grid(self) -> None:
         for x, y in self.square_cords:
             row = x // self.square_size
@@ -1411,10 +1432,13 @@ class Game:
 
     def update_game(self) -> None:
         self.clear_surface()
-        self.display_grid()
-        self.update_timer()
-        self.display_gui()
-        self.get_current_board().update_pieces()
+        if not self.is_game_over:
+            self.display_grid()
+            self.update_timer()
+            self.display_gui()
+            self.get_current_board().update_pieces()
+        else:
+            self.display_game_end()
 
 
 # the main loop needs to call an event loop to establish an interactive game
@@ -1456,7 +1480,8 @@ def game_event_loop(game) -> None:
                     pg.quit()
                     sys.exit()
     else:
-        print(BOARD_STATE_TABLE[game.get_current_board().get_board_state()])
+        print(GameState.BOARD_STATE_TABLE[game.get_current_board().get_board_state()])
+
 
 
 RAND_FENS_PATH = "/home/alonge/Documents/code/capstone/engine/random_fens.txt"
