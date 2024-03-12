@@ -1370,19 +1370,20 @@ class Game:
         y: int = SCREEN_HEIGHT // 2
         WIDTH = 200
         HEIGHT = 40
-        game_state = GameState.BOARD_STATE_TABLE[self.get_current_board().get_board_state()]
+        game_state = self.get_current_board().get_board_state()
         game_end_msg = ""
+        print("Game State", game_state)
         match game_state:
-            case GameState.WIN: game_end_msg = "White Wins",
-            case GameState.LOSS: game_end_msg = "Black Wins",
+            case GameState.WIN: game_end_msg = "White Wins"
+            case GameState.LOSS: game_end_msg = "Black Wins"
             case GameState.DRAW: game_end_msg = "Draw"
+        print("Game End Msg", game_end_msg)
         font = pg.font.Font(None, 32)
         font_color = (255, 255, 255)
         font_img = font.render(game_end_msg, True, font_color)
-        self.surface.blit(font_img, 
+        self.surface.blit(font_img,
                           pg.Rect(x - (WIDTH//2), y-(HEIGHT//2),
                                   WIDTH, HEIGHT))
-
 
     def display_grid(self) -> None:
         for x, y in self.square_cords:
@@ -1479,9 +1480,6 @@ def game_event_loop(game) -> None:
                 elif event.type == pg.QUIT:
                     pg.quit()
                     sys.exit()
-    else:
-        print(GameState.BOARD_STATE_TABLE[game.get_current_board().get_board_state()])
-
 
 
 RAND_FENS_PATH = "/home/alonge/Documents/code/capstone/engine/random_fens.txt"
@@ -1504,7 +1502,9 @@ test_fen_strings = [
     "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1",
     "8/3P4/8/K7/7k/8/4p3/8 w - - 0 1",
     "8/R3k3/7b/8/8/3R4/3K4/8 w - - 0 1",
-    "k7/8/PP5/K7/8/8/8/8 w - - 7 9"
+    "k7/8/PP5/K7/8/8/8/8 w - - 7 9",
+    "6k1/1Q6/5K2/8/8/8/8/8 w - - 20 15",
+    "6K1/1q6/5k2/8/8/8/8/8 w - - 20 15"
 ]
 
 """
@@ -1530,7 +1530,9 @@ fen_prompt = """
     6 to test castling,
     7 to test promotion,
     8 for testing *legal* moves,
-    9 for end game testing
+    9 for draw testing
+    10 for win testing
+    11 for loss testing
     """
 
 if __name__ == "__main__":
