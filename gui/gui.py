@@ -270,9 +270,6 @@ def on_mouse_up(game) -> None:
         piece.snap_to_square()
         piece.click = False
 
-    if new_board.get_board_state() != GameState.CONTINUE:
-        print("Board State:", GameState.BOARD_STATE_TABLE[new_board.get_board_state()])
-        game.is_game_over = True
     game.add_board(new_board)
     new_board.print()
     print(new_board.get_fen(), end="\n\n")
@@ -1142,6 +1139,21 @@ class Board:
                     return GameState.WIN
                 else:
                     return GameState.DRAW
+        if self.game.white_time <= 0:
+            return GameState.LOSS
+        elif self.game.black_time <= 0:
+            return GameState.WIN
+
+        if self.halfmove_count >= 100:
+            return GameState.DRAW
+
+        # check for repition rule:
+        # does the pieces portion of the fen string appear more than 2 times?
+        boards_pieces = [board.get_fen()[0] for board in self.game.boards]
+        number_of_reps = boards_pieces.count(self.get_fen()[0])
+        if number_of_reps >= 3:
+            return GameState.DRAW
+
         return GameState.CONTINUE
 
     def switch_is_white_turn(self) -> bool:
@@ -1182,8 +1194,8 @@ class Game:
         self.black_taken_pieces = []
         self.last_update = time.time()
         min_to_sec = lambda m: m * 60
-        self.white_time = min_to_sec(5)
-        self.black_time = min_to_sec(5)
+        self.white_time = min_to_sec(0.1)
+        self.black_time = min_to_sec(0.1)
         self.is_white_promoting = False
         self.is_black_promoting = False
         self.attempted_promotion: Move
@@ -1456,31 +1468,33 @@ def main(game: Game) -> None:
 # the program easier to understand.
 def game_event_loop(game) -> None:
     # maybe add divergent path for engine input here?
-    if not game.is_game_over:
-        if game.is_engine_turn():
-            board = game.get_current_board()
-            try:
-                best_move_str = engine.get_bestmove(board.get_fen(), 1000, "")
-                print(best_move_str)
-            except:  # do not know how to define stockfish crash as exp.
-                return
-            alg_start, alg_end = best_move_str[:2], best_move_str[2:]
-            start_square = algebraic_to_square(alg_start)
-            end_square = algebraic_to_square(alg_end)
-            move = (start_square, end_square, "")
-            piece = board.piece_map[start_square]
-            new_board = board.get_board_after_move(piece, move)
-            game.add_board(new_board)
-        else:
-            for event in pg.event.get():
-                if event.type == pg.MOUSEBUTTONDOWN:
-                    on_mouse_down(game)
-                elif event.type == pg.MOUSEBUTTONUP:
-                    on_mouse_up(game)
-                elif event.type == pg.QUIT:
-                    pg.quit()
-                    sys.exit()
+    if game.is_engine_turn():
+        board = game.get_current_board()
+        try:
+            best_move_str = engine.get_bestmove(board.get_fen(), 1000, "")
+            print(best_move_str)
+        except:  # do not know how to define stockfish crash as exp.
+            return
+        alg_start, alg_end = best_move_str[:2], best_move_str[2:]
+        start_square = algebraic_to_square(alg_start)
+        end_square = algebraic_to_square(alg_end)
+        move = (start_square, end_square, "")
+        piece = board.piece_map[start_square]
+        new_board = board.get_board_after_move(piece, move)
+        game.add_board(new_board)
+    else:
+        for event in pg.event.get():
+            if event.type == pg.MOUSEBUTTONDOWN:
+                on_mouse_down(game)
+            elif event.type == pg.MOUSEBUTTONUP:
+                on_mouse_up(game)
+            elif event.type == pg.QUIT:
+                pg.quit()
+                sys.exit()
 
+    if game.get_current_board().get_board_state() != GameState.CONTINUE:
+        print("Board State:", GameState.BOARD_STATE_TABLE[game.get_current_board().get_board_state()])
+        game.is_game_over = True
 
 RAND_FENS_PATH = "/home/alonge/Documents/code/capstone/engine/random_fens.txt"
 
