@@ -71,7 +71,7 @@ Cord = tuple[int, int]
 CORD_X = 0
 CORD_Y = 1
 
-IMAGE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "images")
+IMAGE_DIR = os.path.join(os.path.dirname(os.path.abspath(__name__)), "images")
 
 INT_TO_LETTER = {
     0: "a",
@@ -1149,8 +1149,8 @@ class Board:
 
         # check for repition rule:
         # does the pieces portion of the fen string appear more than 2 times?
-        boards_pieces = [board.get_fen()[0] for board in self.game.boards]
-        number_of_reps = boards_pieces.count(self.get_fen()[0])
+        boards_pieces = [board.get_fen().split()[0] for board in self.game.boards]
+        number_of_reps = boards_pieces.count(self.get_fen().split()[0])
         if number_of_reps >= 3:
             return GameState.DRAW
 
@@ -1194,8 +1194,8 @@ class Game:
         self.black_taken_pieces = []
         self.last_update = time.time()
         min_to_sec = lambda m: m * 60
-        self.white_time = min_to_sec(0.1)
-        self.black_time = min_to_sec(0.1)
+        self.white_time = min_to_sec(5)
+        self.black_time = min_to_sec(5)
         self.is_white_promoting = False
         self.is_black_promoting = False
         self.attempted_promotion: Move
@@ -1549,14 +1549,14 @@ fen_prompt = """
     11 for loss testing
     """
 
-if __name__ == "__main__":
-    os.environ["SDL_VIDEO_CENTERED"] = "1"
-    pg.init()
-    fen = test_fen_strings[int(input(fen_prompt))]
-    print(fen)
-    game = Game(fen)
-    MyClock = pg.time.Clock()
-    while True:
-        main(game)
-        pg.display.update()
-        MyClock.tick(60)
+#if __name__ == "__main__":
+os.environ["SDL_VIDEO_CENTERED"] = "1"
+pg.init()
+fen = test_fen_strings[int(input(fen_prompt))]
+print(fen)
+game = Game(fen)
+MyClock = pg.time.Clock()
+while True:
+    main(game)
+    pg.display.update()
+    MyClock.tick(60)
