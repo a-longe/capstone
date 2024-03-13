@@ -335,6 +335,7 @@ class Piece:
         self.square = board.game.get_square_index(*rect[:2])
         self.previous_center = self.rect.center
         self.click = False
+        self.memoed_valid_moves = None
         self.image = pg.transform.scale(
             get_piece_img(glyph), (board.game.square_size, board.game.square_size)
         )
@@ -378,10 +379,12 @@ class Bishop(Piece):
         Piece.__init__(self, board, rect, glyph)
 
     def get_valid_moves(self) -> list[Move]:
+        if self.memoed_valid_moves: return self.memoed_valid_moves
         OFFSETS = ((-1, -1), (-1, 1), (1, 1), (1, -1))
         valid_moves = []
         for offset in OFFSETS:
             valid_moves += self.board.get_sliding_moves(self.square, offset)
+        self.memoed_valid_moves = valid_moves
         return valid_moves
 
 
@@ -390,10 +393,12 @@ class Rook(Piece):
         Piece.__init__(self, board, rect, glyph)
 
     def get_valid_moves(self) -> list[Move]:
+        if self.memoed_valid_moves: return self.memoed_valid_moves
         OFFSETS = ((1, 0), (-1, 0), (0, 1), (0, -1))
         valid_moves = []
         for offset in OFFSETS:
             valid_moves += self.board.get_sliding_moves(self.square, offset)
+        self.memoed_valid_moves = valid_moves
         return valid_moves
 
 
@@ -402,10 +407,12 @@ class Queen(Piece):
         Piece.__init__(self, board, rect, glyph)
 
     def get_valid_moves(self) -> list[Move]:
+        if self.memoed_valid_moves: return self.memoed_valid_moves
         OFFSETS = ((-1, -1), (-1, 1), (1, 1), (1, -1), (1, 0), (-1, 0), (0, 1), (0, -1))
         valid_moves = []
         for offset in OFFSETS:
             valid_moves += self.board.get_sliding_moves(self.square, offset)
+        self.memoed_valid_moves = valid_moves
         return valid_moves
 
 
@@ -414,6 +421,7 @@ class Knight(Piece):
         Piece.__init__(self, board, rect, glyph)
 
     def get_valid_moves(self) -> list[Move]:
+        if self.memoed_valid_moves: return self.memoed_valid_moves
         OFFSETS = (
             (-2, -1),
             (-2, 1),
@@ -425,6 +433,7 @@ class Knight(Piece):
             (2, 1),
         )
         valid_moves = self.board.get_jumping_moves(self.square, OFFSETS)
+        self.memoed_valid_moves = valid_moves
         return valid_moves
 
 
@@ -433,6 +442,7 @@ class King(Piece):
         Piece.__init__(self, board, rect, glyph)
 
     def get_valid_moves(self) -> list[Move]:
+        if self.memoed_valid_moves: return self.memoed_valid_moves
         valid_moves = []
         OFFSETS = ((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1))
         CASTLING_KINGSIDE_OFFSET = [(0, 2)]
@@ -466,6 +476,7 @@ class King(Piece):
                 elif castling_right.lower() == "q":
                     valid_moves += castling_queenside_moves
 
+        self.memoed_valid_moves = valid_moves
         return valid_moves
 
 
@@ -488,10 +499,9 @@ class Pawn(Piece):
             case "b" | "B":
                 self.board.piece_map[self.square] = Bishop(self.board,
                                                            self.rect, glyph)
-            case _:
-                print("Invalid Glyph:", glyph)
 
     def get_valid_moves(self) -> list[Move]:
+        if self.memoed_valid_moves: return self.memoed_valid_moves
         valid_moves = []
         direction = -1 if self.is_white else 1
         move_offsets = [(1 * direction, 0)]
@@ -536,6 +546,7 @@ class Pawn(Piece):
                 valid_moves_with_promotion += disconstructed_moves
             else:
                 valid_moves_with_promotion.append(valid_move)
+        self.memoed_valid_moves = valid_moves_with_promotion
         return valid_moves_with_promotion
 
 
@@ -553,6 +564,7 @@ class Board:
         self.surface = game.surface  # passed by reference
         self.game = game
         self.piece_map = {}
+        self.memoed_next_boards = {}
         for piece_data in piece_positions:
             rect = pg.Rect(
                 piece_data[PIECE_X],
@@ -976,6 +988,8 @@ class Board:
         return new_board
 
     def get_board_after_move(self, piece: Piece, move: Move) -> "Board":
+        if move in self.memoed_next_boards:
+            return self.memoed_next_boards[move]
         start_square, end_square, promotion_glyph = move
         move_evalutation = self.eval_move(piece, end_square)
         match move_evalutation:
@@ -1006,7 +1020,8 @@ class Board:
                 new_board = self.get_board_after_promotion(move)
             case _:
                 print("error with eval move")
-
+        
+        self.memoed_next_boards[move] = new_board
         return new_board
 
     def get_clicked_piece(self) -> Piece:
