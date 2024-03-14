@@ -1399,12 +1399,10 @@ class Game:
         HEIGHT = 40
         game_state = self.get_current_board().get_board_state()
         game_end_msg = ""
-        print("Game State", game_state)
         match game_state:
             case GameState.WIN: game_end_msg = "White Wins"
             case GameState.LOSS: game_end_msg = "Black Wins"
             case GameState.DRAW: game_end_msg = "Draw"
-        print("Game End Msg", game_end_msg)
         font = pg.font.Font(None, 32)
         font_color = (255, 255, 255)
         font_img = font.render(game_end_msg, True, font_color)
