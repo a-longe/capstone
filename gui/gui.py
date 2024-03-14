@@ -9,11 +9,9 @@ import time
 
 import pygame as pg
 
-import engine_handler as engine
+import engine_handler as enginelib
 
-STOCKFISH_PATH = (
-    "/home/alonge/Documents/stockfish/stockfish/stockfish-ubuntu-x86-64-avx2"
-)
+STOCKFISH_PATH = "/home/alonge/Documents/stockfish/stockfish/stockfish-ubuntu-x86-64-avx2"
 
 SCREEN_WIDTH = 1600
 SCREEN_HEIGHT = 1080
@@ -1108,7 +1106,7 @@ class Board:
         fen += " "
 
         fen += (
-            "- " if self.en_passent_target == -1 else str(self.en_passent_target) + " "
+            "- " if self.en_passent_target == -1 else square_index_to_algebraic(self.en_passent_target) + " "
         )
 
         fen += str(self.move_count) + " "
@@ -1184,7 +1182,7 @@ class Board:
 
 class Game:
     def __init__(self, starting_fen=STARTING_FEN) -> None:
-        self.engine = engine.Engine(STOCKFISH_PATH)
+        self.engine = enginelib.Engine(STOCKFISH_PATH)
         self.square_size = 100
         self.top_left = (200, 100)
         self.bottom_right = (
@@ -1217,7 +1215,7 @@ class Game:
         self.is_game_over = False
         self.display_blue = True
         self.is_engine_white = False
-        self.enable_engine = False
+        self.enable_engine = True 
         """
         Note:
         Used to have is_white_turn and move_count in this init but because
@@ -1430,8 +1428,8 @@ class Game:
             txt_algebraic = font.render(
                 str(square_index_to_algebraic(square_num)), True, font_color
             )
-            self.surface.blit(txt_square_i, square_num_rect)
-            # self.surface.blit(txt_algebraic, algebraic_rect)
+            # self.surface.blit(txt_square_i, square_num_rect)
+            self.surface.blit(txt_algebraic, algebraic_rect)
         if self.display_blue:
             self.display_blue_squares()
 
@@ -1483,10 +1481,14 @@ def game_event_loop(game) -> None:
     # maybe add divergent path for engine input here?
     if game.is_engine_turn():
         board = game.get_current_board()
+        if board == -1: return
         try:
-            best_move_str = engine.get_bestmove(board.get_fen(), 1000, "")
+            fen = board.get_fen()
+            print(fen)
+            best_move_str = game.engine.get_bestmove(board.get_fen(), 1000)
             print(best_move_str)
-        except:  # do not know how to define stockfish crash as exp.
+        except Exception as e:  # do not know how to define stockfish crash as exp.
+            print("stockfish crashed ;(", e)
             return
         alg_start, alg_end = best_move_str[:2], best_move_str[2:]
         start_square = algebraic_to_square(alg_start)

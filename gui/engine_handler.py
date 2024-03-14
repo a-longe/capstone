@@ -1,5 +1,6 @@
 import subprocess
 
+
 class Engine:
     def __init__(self, path:str) -> None:
         self.engine = subprocess.Popen(path, 
@@ -43,4 +44,3 @@ class Engine:
             if "Final evaluation" in line:
                 return float(line[17:28].strip())
 
-sf = Engine("/home/alonge/Documents/stockfish/stockfish/stockfish-ubuntu-x86-64-avx2")
