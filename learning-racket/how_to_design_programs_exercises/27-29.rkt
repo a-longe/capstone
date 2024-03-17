@@ -2,24 +2,34 @@
 
 ;; Andres mentioned the idea of creating a graphing function
 ;; so lets try that out
+(require 2htdp/image)
+(define polls 0.1)
+;; Number Number Number -> Image
+;; Slope is a Number
+;; Using the slope, create a line with given slope
+;; at the give coordinates
+(define (slope->img slope x y screen-size)
+  (add-line (empty-scene screen-size screen-size)
+            x y
+            (+ x polls) (+ y (* slope 1))
+            "black"))
 
 ;; Procedure -> Image
 ;; given an procedure with one argument (x)
 ;; creates an image black screen with white
-;; pixels at coordinates that corespond to the procedure
+;; pixels at coordinates that correspond to the procedure
 ;; Procedure must return a number
-(require 2htdp/image)
-(define (num-func->img proc size)
+(define (num-func->img func size)
   (for/fold ([img (rectangle size size "solid" "gray")])
-            ([x-value (in-range (* (quotient size 2) -1) (quotient size 2) 0.1)])
+            ([x-value (in-range (* (quotient size 2) -1) (quotient size 2) polls)])
     (place-image (square 2 "solid" "black")
                  (+ x-value (quotient size 2))
-                 (+ (* (proc x-value) -1) (quotient size 2))
+                 (+ (* (func x-value) -1) (quotient size 2))
                  img)
     ))
 
 (define (disp x)
-  (abs x))
+  (expt (* 2 x) 2))
 
 ;; NOTES after completing:
 ;; probably the 'nicer' way of doing it is by recursion where the
