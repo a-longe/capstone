@@ -29,7 +29,7 @@
     ))
 
 (define (disp x)
-  (sin x))
+  (expt (* 2 x) 2))
 
 ;; NOTES after completing:
 ;; probably the 'nicer' way of doing it is by recursion where the
