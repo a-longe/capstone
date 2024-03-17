@@ -4,14 +4,14 @@
 ;; so lets try that out
 (require 2htdp/image)
 (define polls 0.1)
-;; Number Number Number -> Image
+;; Number -> Image
 ;; Slope is a Number
 ;; Using the slope, create a line with given slope
 ;; at the give coordinates
-(define (slope->img slope x y screen-size)
-  (add-line (empty-scene screen-size screen-size)
-            x y
-            (+ x polls) (+ y (* slope 1))
+(define (slope->img slope)
+  (add-line (empty-scene polls (abs slope))
+            0 0
+            polls (* slope 1)
             "black"))
 
 ;; Procedure -> Image
@@ -22,14 +22,14 @@
 (define (num-func->img func size)
   (for/fold ([img (rectangle size size "solid" "gray")])
             ([x-value (in-range (* (quotient size 2) -1) (quotient size 2) polls)])
-    (place-image (square 2 "solid" "black")
+    (place-image (slope->img (/ (- (func (+ x-value polls)) (func x-value)) polls))
                  (+ x-value (quotient size 2))
                  (+ (* (func x-value) -1) (quotient size 2))
                  img)
     ))
 
 (define (disp x)
-  (expt (* 2 x) 2))
+  (sin x))
 
 ;; NOTES after completing:
 ;; probably the 'nicer' way of doing it is by recursion where the
@@ -51,5 +51,5 @@
      (cost price)))
 
 
-(num-func->img profit 400)
+;(num-func->img profit 400)
 
