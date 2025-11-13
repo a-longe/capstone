@@ -1,16 +1,5 @@
 # Capstone
 
-## Update Instructions
+This project was created for my high school graduation capstone project
 
-- Add to git stage `git add .`
-- Commit changes `git commit -m "commit message"`
-- Push to repository `git push github main`
-
-## Pull Instructions
-
-- Pull changes from github to local `git pull github main`
-
-## Remove files from git repo
-
-- remove all files from git repo `git rm -r --cached .`
-- add back files following .gitignore by updating
+It is a chess gui program that plays against stockfish
