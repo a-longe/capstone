@@ -6,10 +6,11 @@ import os
 from random import randint
 import sys
 import time
+from typing import final
 
 import pygame as pg
 
-import engine_handler as enginelib
+import enginehandler as enginelib
 
 STOCKFISH_PATH = "/home/alonge/Documents/stockfish/stockfish/stockfish-ubuntu-x86-64-avx2"
 
@@ -38,6 +39,7 @@ PIECE_GLYPH = 3
 
 
 # These are all relative to white
+@final
 class GameState:
     BOARD_STATE_TABLE = {
             0: "Loss",
@@ -83,6 +85,7 @@ INT_TO_LETTER = {
 }
 
 
+@final
 class MoveEvalResponces:
     INVALID_MOVE = -1
     MOVE_TO_EMPTY = 1
@@ -94,7 +97,7 @@ class MoveEvalResponces:
     PROMOTION = 7
 
 
-def add_tuples(t1: tuple, t2: tuple) -> tuple[int, int]:
+def add_tuples(t1: tuple[int, int], t2: tuple[int, int]) -> tuple[int, int]:
     """Precondition: tuples must both be len(2)"""
     return (t1[0] + t2[0], t1[1] + t2[1])
 
@@ -1018,7 +1021,7 @@ class Board:
                 new_board = self.get_board_after_promotion(move)
             case _:
                 print("error with eval move")
-        
+
         self.memoed_next_boards[move] = new_board
         return new_board
 
@@ -1215,7 +1218,7 @@ class Game:
         self.is_game_over = False
         self.display_blue = True
         self.is_engine_white = False
-        self.enable_engine = True 
+        self.enable_engine = True
         """
         Note:
         Used to have is_white_turn and move_count in this init but because
