@@ -6,11 +6,12 @@ import os
 from random import randint
 import sys
 import time
+from token import STAR
 from typing import final
 
 import pygame as pg
 
-import enginehandler as enginelib
+import engine_handler as enginelib
 
 STOCKFISH_PATH = "/home/alonge/Documents/stockfish/stockfish/stockfish-ubuntu-x86-64-avx2"
 
@@ -1514,67 +1515,13 @@ def game_event_loop(game) -> None:
         print("Board State:", GameState.BOARD_STATE_TABLE[game.get_current_board().get_board_state()])
         game.is_game_over = True
 
-RAND_FENS_PATH = "/home/alonge/Documents/code/capstone/engine/random_fens.txt"
 
-
-def get_random_fen() -> str:
-    with open(RAND_FENS_PATH) as fen_file:
-        fens = fen_file.readlines()
-    fen = fens[randint(0, len(fens) - 1)]
-    return fen
-
-
-test_fen_strings = [
-    STARTING_FEN,
-    "8/8/8/8/8/8/8/8 w - - 0 1",
-    "8/6p1/5P2/4p3/3P4/2p5/1P6/8 w - - 0 1",
-    "k7/8/8/3bQ3/3nR3/8/8/8 b KQkq - 0 1",
-    get_random_fen(),
-    "8/3pp3/8/8/8/8/3PP3/8 b - - 0 1",
-    "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1",
-    "8/3P4/8/K7/7k/8/4p3/8 w - - 0 1",
-    "8/R3k3/7b/8/8/3R4/3K4/8 w - - 0 1",
-    "k7/8/PP5/K7/8/8/8/8 w - - 7 9",
-    "6k1/1Q6/5K2/8/8/8/8/8 w - - 20 15",
-    "6K1/1q6/5k2/8/8/8/8/8 w - - 20 15"
-]
-
-"""
-these lines code below are pygame witchcraft but essentially
-we need to center the executable environment, initiate pygame
-and create the game of chess we're going to play.
-The clock simply makes sure that the pygame window is always doing
-something, otherwise the operating system attempts the shut it down
-because it dosent think the program is doing anything then, we want
-the main loop (main()) to run every frame followed by updating pygame's
-display, not to be confused with updating the board or pieces.
-"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1"
-"""
-
-fen_prompt = """
-    choose a fen string,
-    0 is standard staring fen string,
-    1 is an empty board,
-    2 will help test pawn movement,
-    3 will test most other pieces,
-    4 is a random fen string,
-    5 is a en passent test,
-    6 to test castling,
-    7 to test promotion,
-    8 for testing *legal* moves,
-    9 for draw testing
-    10 for win testing
-    11 for loss testing
-    """
-
-#if __name__ == "__main__":
-os.environ["SDL_VIDEO_CENTERED"] = "1"
-pg.init()
-fen = test_fen_strings[int(input(fen_prompt))]
-print(fen)
-game = Game(fen)
-MyClock = pg.time.Clock()
-while True:
-    main(game)
-    pg.display.update()
-    MyClock.tick(60)
+if __name__ == "__main__":
+    os.environ["SDL_VIDEO_CENTERED"] = "1"
+    pg.init()
+    game = Game(STARTING_FEN)
+    MyClock = pg.time.Clock()
+    while True:
+        main(game)
+        pg.display.update()
+        MyClock.tick(60)
